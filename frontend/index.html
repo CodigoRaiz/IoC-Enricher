@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IOC Enricher — SOC Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --surface: #0d1117;
+  --panel: #111820;
+  --border: #1e2d3d;
+  --accent: #00d4ff;
+  --accent2: #0099cc;
+  --green: #00ff88;
+  --red: #ff4455;
+  --orange: #ff9933;
+  --yellow: #ffd700;
+  --muted: #4a6478;
+  --text: #c9d8e8;
+  --textdim: #6b8299;
+  --mono: 'JetBrains Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 60px; }
+
+/* ── HEADER ── */
+header {
+  padding: 24px 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 36px;
+}
+
+.logo { display: flex; align-items: center; gap: 14px; }
+
+.logo-icon {
+  width: 42px; height: 42px;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 16px rgba(0,212,255,0.25);
+}
+
+.logo-icon svg { width: 22px; height: 22px; color: var(--accent); }
+
+.logo-info { display: flex; flex-direction: column; gap: 2px; }
+
+.logo-name {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.logo-name span { color: var(--accent); }
+
+.logo-sub { font-size: 11px; color: var(--textdim); letter-spacing: 1px; }
+
+.header-right { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--textdim); }
+
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ── SECCIONES ── */
+.section { margin-bottom: 28px; }
+
+.section-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── TEXTAREA ── */
+textarea {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 14px 16px;
+  resize: vertical;
+  min-height: 140px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,212,255,0.1); }
+textarea::placeholder { color: var(--muted); }
+
+.helper-text { font-size: 11px; color: var(--textdim); margin-top: 6px; }
+
+/* ── SELECT ── */
+select {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+select:focus { border-color: var(--accent); }
+
+.select-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── SOURCE CARDS ── */
+.sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.source-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  user-select: none;
+}
+
+.source-card:hover:not(.disabled) { border-color: var(--accent); background: rgba(0,212,255,0.05); }
+.source-card.selected { border-color: var(--accent); background: rgba(0,212,255,0.1); }
+.source-card.disabled { opacity: 0.35; cursor: not-allowed; }
+
+.source-checkbox {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+
+.source-card.selected .source-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.source-card.selected .source-checkbox::after {
+  content: '✓';
+  font-size: 11px;
+  color: #000;
+  font-weight: 700;
+}
+
+.source-info { flex: 1; }
+.source-name { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.source-tags { font-size: 10px; color: var(--textdim); }
+
+.max-warning {
+  font-size: 11px;
+  color: var(--orange);
+  margin-top: 8px;
+  display: none;
+}
+
+.max-warning.visible { display: block; }
+
+/* ── AI SELECTOR ── */
+.ai-row { display: flex; gap: 10px; }
+
+.ai-card {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.ai-card:hover { border-color: var(--accent); }
+.ai-card.selected { border-color: var(--accent); background: rgba(0,212,255,0.1); }
+.ai-card .ai-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.ai-card .ai-sub { font-size: 10px; color: var(--textdim); margin-top: 2px; }
+
+/* ── BOTÓN ANALIZAR ── */
+.btn-analyze {
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-analyze:hover:not(:disabled) {
+  background: rgba(0,212,255,0.1);
+  box-shadow: 0 0 24px rgba(0,212,255,0.2);
+}
+
+.btn-analyze:disabled { border-color: var(--border); color: var(--textdim); cursor: not-allowed; }
+
+/* ── PROGRESS ── */
+.progress-wrap {
+  margin-top: 20px;
+  display: none;
+}
+
+.progress-wrap.visible { display: block; }
+
+.progress-bar-bg {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  height: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  border-radius: 4px;
+  animation: scanning 2s ease-in-out infinite;
+}
+
+@keyframes scanning {
+  0% { width: 0%; margin-left: 0; }
+  50% { width: 70%; margin-left: 15%; }
+  100% { width: 0%; margin-left: 100%; }
+}
+
+.progress-msg { font-size: 11px; color: var(--textdim); text-align: center; }
+
+/* ── RESULTADOS ── */
+.results-section { margin-top: 40px; }
+
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.results-title {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.export-btns { display: flex; gap: 10px; }
+
+.btn-export {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--textdim);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-export:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── IOC CARD ── */
+.ioc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  border-left: 3px solid var(--muted);
+}
+
+.ioc-card.malicious { border-left-color: var(--red); }
+.ioc-card.suspicious { border-left-color: var(--orange); }
+.ioc-card.clean { border-left-color: var(--green); }
+
+.ioc-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ioc-value {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  flex: 1;
+}
+
+.ioc-badge {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.ioc-badge.ip { background: rgba(0,212,255,0.15); color: var(--accent); }
+.ioc-badge.domain { background: rgba(0,255,136,0.15); color: var(--green); }
+.ioc-badge.url { background: rgba(255,215,0,0.15); color: var(--yellow); }
+.ioc-badge.hash { background: rgba(255,149,0,0.15); color: var(--orange); }
+
+.cached-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  background: rgba(74,100,120,0.3);
+  color: var(--muted);
+}
+
+/* ── SOURCE RESULTS ── */
+.source-results {
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.source-result-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.source-result-name {
+  font-size: 11px;
+  color: var(--textdim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.verdict-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.verdict-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.verdict-dot.malicious { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.verdict-dot.suspicious { background: var(--orange); }
+.verdict-dot.clean { background: var(--green); }
+.verdict-dot.unknown { background: var(--muted); }
+
+.verdict-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.verdict-label.malicious { color: var(--red); }
+.verdict-label.suspicious { color: var(--orange); }
+.verdict-label.clean { color: var(--green); }
+.verdict-label.unknown { color: var(--muted); }
+
+.source-detail {
+  font-size: 11px;
+  color: var(--textdim);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.btn-web {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--textdim);
+  font-family: var(--mono);
+  font-size: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.btn-web:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── AI SUMMARY ── */
+.ai-summary-box {
+  padding: 16px 20px;
+  margin: 16px 20px;
+  background: rgba(0,212,255,0.04);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 8px;
+}
+
+.ai-summary-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-summary-text {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text);
+}
+
+/* ── FOOTER ── */
+footer {
+  margin-top: 60px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.footer-left { font-size: 11px; color: var(--textdim); }
+.footer-right { font-size: 11px; color: var(--muted); }
+
+/* ── ERROR ── */
+.error-box {
+  padding: 14px 18px;
+  background: rgba(255,68,85,0.08);
+  border: 1px solid rgba(255,68,85,0.3);
+  border-radius: 8px;
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 16px;
+  display: none;
+}
+
+.error-box.visible { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div class="logo-info">
+        <div class="logo-name">IOC<span>Enricher</span></div>
+        <div class="logo-sub">Threat Intelligence · SOC Tool</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="dot"></div>
+      Sistema operativo
+    </div>
+  </header>
+
+  <!-- STEP 1 — IOC INPUT -->
+  <div class="section">
+    <div class="section-label">Paso 1 — Indicadores a analizar</div>
+    <textarea id="ioc-input"
+      placeholder="185.220.101.45&#10;malware-c2.xyz&#10;44d88612fea8a8f36de82e1278abb02f"
+      oninput="updateAnalyzeBtn()"></textarea>
+    <div class="helper-text">Ingresa un IoC por línea. Soporta: IPs · Dominios · URLs · Hashes MD5/SHA1/SHA256</div>
+  </div>
+
+  <!-- STEP 2 — IOC TYPE + AI -->
+  <div class="section">
+    <div class="section-label">Paso 2 — Configuración</div>
+    <div class="select-row">
+      <div>
+        <div style="font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--textdim); margin-bottom:6px;">Tipo de indicador</div>
+        <select id="ioc-type" onchange="updateSourceCards()">
+          <option value="auto">Auto-detectar (detecta el tipo automáticamente)</option>
+          <option value="ip">Dirección IP</option>
+          <option value="domain">Dominio / URL</option>
+          <option value="hash">Hash de archivo (MD5 / SHA1 / SHA256)</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--textdim); margin-bottom:6px;">Motor de IA para resumen</div>
+        <div class="ai-row">
+          <div class="ai-card selected" id="ai-gemini" onclick="selectAI('gemini')">
+            <div class="ai-name">Gemini</div>
+            <div class="ai-sub">Google · Gratis</div>
+          </div>
+          <div class="ai-card" id="ai-claude" onclick="selectAI('claude')">
+            <div class="ai-name">Claude</div>
+            <div class="ai-sub">Anthropic · API</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 — SOURCES -->
+  <div class="section">
+    <div class="section-label">Paso 3 — Fuentes de consulta (máximo 2)</div>
+    <div class="sources-grid" id="sources-grid"></div>
+    <div class="max-warning" id="max-warning">⚠ Máximo 2 fuentes permitidas — deselecciona una antes de elegir otra</div>
+  </div>
+
+  <!-- ANALYZE BUTTON -->
+  <button class="btn-analyze" id="btn-analyze" onclick="runAnalysis()" disabled>
+    ▶&nbsp;&nbsp;ANALIZAR INDICADORES
+  </button>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-bar-bg"><div class="progress-bar"></div></div>
+    <div class="progress-msg" id="progress-msg">Consultando fuentes seleccionadas...</div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-box" id="error-box"></div>
+
+  <!-- RESULTS -->
+  <div class="results-section" id="results-section" style="display:none">
+    <div class="results-header">
+      <div class="results-title">Resultados del análisis</div>
+      <div class="export-btns">
+        <button class="btn-export" onclick="copyReport()">📋 Copiar reporte</button>
+        <button class="btn-export" onclick="downloadReport()">⬇ Descargar .txt</button>
+      </div>
+    </div>
+    <div id="results-container"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-left">IOC Enricher v1.0 · Uso interno SOC</div>
+    <div class="footer-right">
+      Backend: Python Flask · IA: Gemini 1.5 Flash / Claude Sonnet ·
+      <span id="cache-hits">0</span> consultas ahorradas hoy
+    </div>
+  </footer>
+
+</div>
+
+<script>
+// ── DEFINICIÓN DE FUENTES ──
+const SOURCES = [
+  { id: "virustotal",          name: "VirusTotal",           tags: "IP · Dominio · Hash",  types: ["ip","domain","url","hash","auto"] },
+  { id: "abuseipdb",           name: "AbuseIPDB",            tags: "IP",                   types: ["ip","auto"] },
+  { id: "greynoise",           name: "GreyNoise",            tags: "IP",                   types: ["ip","auto"] },
+  { id: "alienvault_otx",      name: "AlienVault OTX",       tags: "IP · Dominio · Hash",  types: ["ip","domain","url","hash","auto"] },
+  { id: "threatbook",          name: "ThreatBook",           tags: "IP · Dominio · Hash",  types: ["ip","domain","url","hash","auto"] },
+  { id: "urlhaus",             name: "URLhaus",              tags: "Dominio · URL",        types: ["domain","url","auto"] },
+  { id: "phishtank",           name: "PhishTank",            tags: "Dominio · URL",        types: ["domain","url","auto"] },
+  { id: "google_safebrowsing", name: "Google Safe Browsing", tags: "Dominio · URL",        types: ["domain","url","auto"] },
+  { id: "malwarebazaar",       name: "MalwareBazaar",        tags: "Hash",                 types: ["hash","auto"] },
+  { id: "metadefender",        name: "MetaDefender",         tags: "Hash",                 types: ["hash","auto"] },
+  { id: "hybrid_analysis",     name: "Hybrid Analysis",      tags: "Hash",                 types: ["hash","auto"] },
+  { id: "misp",                name: "MISP",                 tags: "IP · Dominio · Hash",  types: ["ip","domain","url","hash","auto"] },
+];
+
+let selectedSources = [];
+let selectedAI = "gemini";
+let lastResults = [];
+
+// ── RENDERIZAR FUENTES ──
+function renderSources() {
+  const grid = document.getElementById("sources-grid");
+  grid.innerHTML = "";
+  SOURCES.forEach(source => {
+    const card = document.createElement("div");
+    card.className = "source-card";
+    card.id = `src-${source.id}`;
+    card.innerHTML = `
+      <div class="source-checkbox" id="chk-${source.id}"></div>
+      <div class="source-info">
+        <div class="source-name">${source.name}</div>
+        <div class="source-tags">${source.tags}</div>
+      </div>`;
+    card.onclick = () => toggleSource(source.id);
+    grid.appendChild(card);
+  });
+  updateSourceCards();
+}
+
+// ── ACTUALIZAR ESTADO DE CARDS SEGÚN TIPO ──
+function updateSourceCards() {
+  const type = document.getElementById("ioc-type").value;
+  selectedSources = [];
+
+  SOURCES.forEach(source => {
+    const card = document.getElementById(`src-${source.id}`);
+    const enabled = source.types.includes(type);
+    card.classList.remove("selected", "disabled");
+    document.getElementById(`chk-${source.id}`).innerHTML = "";
+    if (!enabled) card.classList.add("disabled");
+  });
+
+  document.getElementById("max-warning").classList.remove("visible");
+  updateAnalyzeBtn();
+}
+
+// ── TOGGLE SOURCE ──
+function toggleSource(id) {
+  const source = SOURCES.find(s => s.id === id);
+  const type   = document.getElementById("ioc-type").value;
+  if (!source.types.includes(type)) return;
+
+  const card = document.getElementById(`src-${id}`);
+  const idx  = selectedSources.indexOf(id);
+
+  if (idx > -1) {
+    selectedSources.splice(idx, 1);
+    card.classList.remove("selected");
+    document.getElementById(`chk-${id}`).innerHTML = "";
+  } else {
+    if (selectedSources.length >= 2) {
+      document.getElementById("max-warning").classList.add("visible");
+      return;
+    }
+    document.getElementById("max-warning").classList.remove("visible");
+    selectedSources.push(id);
+    card.classList.add("selected");
+  }
+  updateAnalyzeBtn();
+}
+
+// ── SELECCIONAR IA ──
+function selectAI(provider) {
+  selectedAI = provider;
+  document.getElementById("ai-gemini").classList.toggle("selected", provider === "gemini");
+  document.getElementById("ai-claude").classList.toggle("selected", provider === "claude");
+}
+
+// ── ACTUALIZAR BOTÓN ──
+function updateAnalyzeBtn() {
+  const hasIocs    = document.getElementById("ioc-input").value.trim().length > 0;
+  const hasSources = selectedSources.length > 0;
+  document.getElementById("btn-analyze").disabled = !(hasIocs && hasSources);
+}
+
+// ── MENSAJES DE PROGRESO ──
+const PROGRESS_MSGS = [
+  "Consultando fuentes seleccionadas...",
+  "Verificando reputación...",
+  "Procesando resultados...",
+  "Generando resumen con IA..."
+];
+
+let progressInterval = null;
+
+function startProgress() {
+  let i = 0;
+  const el = document.getElementById("progress-msg");
+  el.textContent = PROGRESS_MSGS[0];
+  progressInterval = setInterval(() => {
+    i = (i + 1) % PROGRESS_MSGS.length;
+    el.textContent = PROGRESS_MSGS[i];
+  }, 1800);
+  document.getElementById("progress-wrap").classList.add("visible");
+}
+
+function stopProgress() {
+  clearInterval(progressInterval);
+  document.getElementById("progress-wrap").classList.remove("visible");
+}
+
+// ── EJECUTAR ANÁLISIS ──
+async function runAnalysis() {
+  const iocText = document.getElementById("ioc-input").value.trim();
+  if (!iocText || selectedSources.length === 0) return;
+
+  document.getElementById("btn-analyze").disabled = true;
+  document.getElementById("results-section").style.display = "none";
+  document.getElementById("error-box").classList.remove("visible");
+  startProgress();
+
+  try {
+    const resp = await fetch("http://localhost:5001/analyze", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        iocs:        iocText,
+        sources:     selectedSources,
+        ioc_type:    document.getElementById("ioc-type").value,
+        ai_provider: selectedAI
+      })
+    });
+
+    const data = await resp.json();
+
+    if (data.error) throw new Error(data.error);
+
+    lastResults = data.results || [];
+    renderResults(lastResults);
+    updateCacheHits();
+
+  } catch (err) {
+    const box = document.getElementById("error-box");
+    box.textContent = "⚠ Error: " + err.message + " — Verifica que el backend esté corriendo (python backend/app.py)";
+    box.classList.add("visible");
+  } finally {
+    stopProgress();
+    document.getElementById("btn-analyze").disabled = false;
+    updateAnalyzeBtn();
+  }
+}
+
+// ── RENDERIZAR RESULTADOS ──
+function renderResults(results) {
+  const container = document.getElementById("results-container");
+  container.innerHTML = "";
+
+  results.forEach(result => {
+    const worstVerdict = getWorstVerdict(result.sources);
+    const typeClass    = getTypeClass(result.type);
+    const cached       = result.cached ? '<span class="cached-badge">CACHÉ</span>' : "";
+
+    const sourcesHTML = Object.entries(result.sources).map(([name, data]) => {
+      const webBtn = data.web_url
+        ? `<a class="btn-web" href="${data.web_url}" target="_blank">🔗 Ver en web</a>`
+        : "";
+      return `
+        <div class="source-result-card">
+          <div class="source-result-name">${formatSourceName(name)}</div>
+          <div class="verdict-row">
+            <div class="verdict-dot ${data.verdict}"></div>
+            <div class="verdict-label ${data.verdict}">${formatVerdict(data.verdict)}</div>
+          </div>
+          <div class="source-detail">${data.detail || "Sin detalle"}</div>
+          ${webBtn}
+        </div>`;
+    }).join("");
+
+    const card = document.createElement("div");
+    card.className = `ioc-card ${worstVerdict}`;
+    card.innerHTML = `
+      <div class="ioc-header">
+        <div class="ioc-value">${result.ioc}</div>
+        <span class="ioc-badge ${typeClass}">${formatType(result.type)}</span>
+        ${cached}
+      </div>
+      <div class="source-results">${sourcesHTML}</div>
+      <div class="ai-summary-box">
+        <div class="ai-summary-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+          </svg>
+          Resumen ejecutivo IA
+        </div>
+        <div class="ai-summary-text">${result.ai_summary || "No disponible"}</div>
+      </div>`;
+    container.appendChild(card);
+  });
+
+  document.getElementById("results-section").style.display = "block";
+  document.getElementById("results-section").scrollIntoView({ behavior: "smooth" });
+}
+
+// ── HELPERS ──
+function getWorstVerdict(sources) {
+  const verdicts = Object.values(sources).map(s => s.verdict);
+  if (verdicts.includes("malicious"))  return "malicious";
+  if (verdicts.includes("suspicious")) return "suspicious";
+  if (verdicts.includes("clean"))      return "clean";
+  return "unknown";
+}
+
+function getTypeClass(type) {
+  if (type === "ip")     return "ip";
+  if (type === "domain" || type === "url") return "domain";
+  if (["md5","sha1","sha256","hash"].includes(type)) return "hash";
+  return "";
+}
+
+function formatType(type) {
+  const map = { ip:"IP", domain:"DOMINIO", url:"URL", md5:"MD5", sha1:"SHA1", sha256:"SHA256", hash:"HASH" };
+  return map[type] || type.toUpperCase();
+}
+
+function formatVerdict(verdict) {
+  const map = { malicious:"MALICIOSO", suspicious:"SOSPECHOSO", clean:"LIMPIO", unknown:"DESCONOCIDO" };
+  return map[verdict] || verdict.toUpperCase();
+}
+
+function formatSourceName(id) {
+  const source = SOURCES.find(s => s.id === id);
+  return source ? source.name : id;
+}
+
+// ── EXPORTAR ──
+function buildReportText() {
+  let text = "IOC ENRICHER — REPORTE DE ANÁLISIS\n";
+  text += "=".repeat(50) + "\n\n";
+  lastResults.forEach(r => {
+    text += `IoC: ${r.ioc} (${formatType(r.type)})\n`;
+    text += "-".repeat(40) + "\n";
+    Object.entries(r.sources).forEach(([name, data]) => {
+      text += `  ${formatSourceName(name)}: ${formatVerdict(data.verdict)} — ${data.detail}\n`;
+    });
+    text += `\nResumen IA:\n${r.ai_summary}\n\n`;
+    text += "=".repeat(50) + "\n\n";
+  });
+  return text;
+}
+
+function copyReport() {
+  navigator.clipboard.writeText(buildReportText())
+    .then(() => alert("✓ Reporte copiado al portapapeles"))
+    .catch(() => alert("Error al copiar"));
+}
+
+function downloadReport() {
+  const text = buildReportText();
+  const blob = new Blob([text], { type: "text/plain" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url;
+  a.download = `ioc_report_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── CACHE HITS ──
+async function updateCacheHits() {
+  try {
+    const resp = await fetch("http://localhost:5001/health");
+    const data = await resp.json();
+    document.getElementById("cache-hits").textContent = data.cache_hits_today || 0;
+  } catch {}
+}
+
+// ── INIT ──
+renderSources();
+updateCacheHits();
+</script>
+</body>
+</html>
