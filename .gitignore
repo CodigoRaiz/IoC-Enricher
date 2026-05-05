@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Base de datos
+data/feeds.db
+
+# Entorno virtual
+.venv/
+
+# Variables de entorno
+.env
