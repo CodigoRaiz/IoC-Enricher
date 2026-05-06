@@ -27,7 +27,7 @@ MISP_API_KEY             = os.getenv("MISP_API_KEY", "")
 
 # ── IA ──
 GEMINI_API_KEY           = os.getenv("GEMINI_API_KEY", "")
-ANTHROPIC_API_KEY        = os.getenv("ANTHROPIC_API_KEY", "")
+GROQ_API_KEY             = os.getenv("GROQ_API_KEY", "")
 
 # ── Configuración general ──
 CACHE_TTL_HOURS          = int(os.getenv("CACHE_TTL_HOURS", "24"))

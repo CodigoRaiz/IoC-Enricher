@@ -564,9 +564,9 @@ footer {
             <div class="ai-name">Gemini</div>
             <div class="ai-sub">Google · Gratis</div>
           </div>
-          <div class="ai-card" id="ai-claude" onclick="selectAI('claude')">
-            <div class="ai-name">Claude</div>
-            <div class="ai-sub">Anthropic · API</div>
+          <div class="ai-card" id="ai-groq" onclick="selectAI('groq')">
+            <div class="ai-name">Groq</div>
+            <div class="ai-sub">Llama 3 · Gratis</div>
           </div>
         </div>
       </div>
@@ -704,7 +704,7 @@ function toggleSource(id) {
 function selectAI(provider) {
   selectedAI = provider;
   document.getElementById("ai-gemini").classList.toggle("selected", provider === "gemini");
-  document.getElementById("ai-claude").classList.toggle("selected", provider === "claude");
+  document.getElementById("ai-groq").classList.toggle("selected", provider === "groq");
 }
 
 // ── ACTUALIZAR BOTÓN ──

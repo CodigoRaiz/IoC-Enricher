@@ -1,10 +1,9 @@
-# ai_summary.py — Generación de resumen ejecutivo con IA (Gemini o Claude)
+# ai_summary.py — Generación de resumen ejecutivo con IA (Gemini o Groq)
 import sys
 import os
-import json
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import GEMINI_API_KEY, ANTHROPIC_API_KEY
+from config import GEMINI_API_KEY, GROQ_API_KEY
 
 # Prompt base para el resumen ejecutivo
 PROMPT_TEMPLATE = """Eres un analista de ciberseguridad SOC. Basándote en los siguientes resultados de Threat Intelligence, redacta un resumen ejecutivo en español de máximo 3 oraciones para incluir en un informe de incidente de seguridad. Sé directo y técnico. Incluye: (1) veredicto general del indicador, (2) qué tipo de amenaza representa o por qué es sospechoso según las fuentes consultadas, (3) acción recomendada para el analista. No uses listas, solo párrafo continuo.
@@ -26,54 +25,41 @@ def format_sources_text(sources: dict) -> str:
 
 
 def generate_with_gemini(prompt: str) -> str:
-    """Genera resumen usando Google Gemini 1.5 Flash."""
+    """Genera resumen usando Google Gemini."""
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=GEMINI_API_KEY)
-        model    = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
+        from google import genai
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
         return response.text.strip()
-    except ImportError:
-        return "Error: librería google-generativeai no instalada. Ejecuta: pip install google-generativeai"
     except Exception as e:
         return f"Error al generar resumen con Gemini: {str(e)}"
 
 
-def generate_with_claude(prompt: str) -> str:
-    """Genera resumen usando Claude (Anthropic)."""
+def generate_with_groq(prompt: str) -> str:
+    """Genera resumen usando Groq (Llama 3)."""
     try:
-        import anthropic
-        client   = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        message  = client.messages.create(
-            model      = "claude-sonnet-4-20250514",
-            max_tokens = 400,
-            messages   = [{"role": "user", "content": prompt}]
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=400
         )
-        return message.content[0].text.strip()
-    except ImportError:
-        return "Error: librería anthropic no instalada. Ejecuta: pip install anthropic"
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        return f"Error al generar resumen con Claude: {str(e)}"
+        return f"Error al generar resumen con Groq: {str(e)}"
 
 
 def generate_summary(ioc: str, ioc_type: str, sources: dict, ai_provider: str = "gemini") -> str:
     """
     Genera un resumen ejecutivo del IoC usando la IA seleccionada.
-
-    Args:
-        ioc:         El indicador analizado
-        ioc_type:    Tipo de IoC (ip, domain, hash, etc.)
-        sources:     Resultados de las fuentes consultadas
-        ai_provider: 'gemini' o 'claude'
-
-    Returns:
-        Resumen ejecutivo en español
     """
-    # Verificar que hay resultados para resumir
     if not sources:
         return "No hay resultados de fuentes para generar un resumen."
 
-    # Construir el prompt
     sources_text = format_sources_text(sources)
     prompt = PROMPT_TEMPLATE.format(
         ioc          = ioc,
@@ -81,11 +67,10 @@ def generate_summary(ioc: str, ioc_type: str, sources: dict, ai_provider: str = 
         sources_text = sources_text
     )
 
-    # Seleccionar proveedor de IA
-    if ai_provider == "claude":
-        if not ANTHROPIC_API_KEY:
-            return "⚠️ API key de Anthropic no configurada en el archivo .env"
-        return generate_with_claude(prompt)
+    if ai_provider == "groq":
+        if not GROQ_API_KEY:
+            return "⚠️ API key de Groq no configurada en el archivo .env"
+        return generate_with_groq(prompt)
     else:
         if not GEMINI_API_KEY:
             return "⚠️ API key de Gemini no configurada en el archivo .env"
