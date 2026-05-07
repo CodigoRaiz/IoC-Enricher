@@ -8,22 +8,22 @@ from config import THREATBOOK_API_KEY, REQUEST_TIMEOUT
 
 # URLs de la API por tipo de IoC
 API_URLS = {
-    "ip":     "https://api.threatbook.cn/v3/scene/ip_reputation",
-    "domain": "https://api.threatbook.cn/v3/scene/dns",
-    "hash":   "https://api.threatbook.cn/v3/scene/hash",
-    "md5":    "https://api.threatbook.cn/v3/scene/hash",
-    "sha1":   "https://api.threatbook.cn/v3/scene/hash",
-    "sha256": "https://api.threatbook.cn/v3/scene/hash",
+    "ip":     "https://api.threatbook.io/v2/ip/query",
+    "domain": "https://api.threatbook.io/v2/domain/query",
+    "hash":   "https://api.threatbook.io/v2/file/query",
+    "md5":    "https://api.threatbook.io/v2/file/query",
+    "sha1":   "https://api.threatbook.io/v2/file/query",
+    "sha256": "https://api.threatbook.io/v2/file/query",
 }
 
 # URLs públicas por tipo de IoC
 WEB_URLS = {
-    "ip":     "https://x.threatbook.com/v5/ip/{ioc}",
-    "domain": "https://x.threatbook.com/v5/domain/{ioc}",
-    "hash":   "https://x.threatbook.com/v5/sample/{ioc}",
-    "md5":    "https://x.threatbook.com/v5/sample/{ioc}",
-    "sha1":   "https://x.threatbook.com/v5/sample/{ioc}",
-    "sha256": "https://x.threatbook.com/v5/sample/{ioc}",
+    "ip":     "https://i.threatbook.io/research/{ioc}",
+    "domain": "https://i.threatbook.io/research/{ioc}",
+    "hash":   "https://i.threatbook.io/research/{ioc}",
+    "md5":    "https://i.threatbook.io/research/{ioc}",
+    "sha1":   "https://i.threatbook.io/research/{ioc}",
+    "sha256": "https://i.threatbook.io/research/{ioc}",
 }
 
 def query(ioc: str, ioc_type: str) -> dict:
@@ -51,18 +51,27 @@ def query(ioc: str, ioc_type: str) -> dict:
     try:
         params = {
             "apikey":   THREATBOOK_API_KEY,
-            "resource": ioc
+            "resource": ioc,
         }
-        resp = requests.get(
+        resp = requests.post(
             api_url,
             params=params,
             timeout=REQUEST_TIMEOUT
         )
 
         if resp.status_code == 200:
-            data     = resp.json()
-            response = data.get("data", {})
-            judgments = response.get("judgments", [])
+            data      = resp.json()
+            resp_code = data.get("response_code", -1)
+
+            if resp_code != 0:
+                return {
+                    "verdict": "unknown",
+                    "detail":  f"Error ThreatBook: {data.get('message', 'Sin mensaje')}",
+                    "web_url": web_url
+                }
+
+            ioc_data  = data.get("data", {})
+            judgments = ioc_data.get("judgments", [])
 
             judgment_str = ", ".join(judgments) if judgments else "Sin juicio"
             if any(j in ["Malicious", "C2", "Botnet", "Phishing"] for j in judgments):
@@ -89,7 +98,7 @@ def query(ioc: str, ioc_type: str) -> dict:
         else:
             return {
                 "verdict": "unknown",
-                "detail":  f"Error HTTP {resp.status_code}",
+                "detail":  f"Error HTTP {resp.status_code} — {resp.text[:100]}",
                 "web_url": web_url
             }
 
