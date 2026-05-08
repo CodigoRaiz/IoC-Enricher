@@ -553,7 +553,7 @@ footer {
         <select id="ioc-type" onchange="updateSourceCards()">
           <option value="auto">Auto-detectar (detecta el tipo automáticamente)</option>
           <option value="ip">Dirección IP</option>
-          <option value="domain">Dominio / URL</option>
+          <option value="url">Dominio / URL</option>
           <option value="hash">Hash de archivo (MD5 / SHA1 / SHA256)</option>
         </select>
       </div>
@@ -620,7 +620,7 @@ footer {
 <script>
 // ── DEFINICIÓN DE FUENTES ──
 const SOURCES = [
-  { id: "virustotal",          name: "VirusTotal",           tags: "IP · Dominio · Hash",  types: ["ip","domain","url","hash","auto"] },
+  { id: "virustotal",          name: "VirusTotal",           tags: "IP · Dominio · URL · Hash", types: ["ip","domain","url","hash","auto"] },
   { id: "abuseipdb",           name: "AbuseIPDB",            tags: "IP",                   types: ["ip","auto"] },
   { id: "greynoise",           name: "GreyNoise",            tags: "IP",                   types: ["ip","auto"] },
   { id: "alienvault_otx",      name: "AlienVault OTX",       tags: "IP · Dominio · Hash",  types: ["ip","domain","url","hash","auto"] },
