@@ -10,6 +10,7 @@ from config import THREATBOOK_API_KEY, REQUEST_TIMEOUT
 API_URLS = {
     "ip":     "https://api.threatbook.io/v2/ip/query",
     "domain": "https://api.threatbook.io/v2/domain/query",
+    "url":    "https://api.threatbook.io/v2/url/query",
     "hash":   "https://api.threatbook.io/v2/file/query",
     "md5":    "https://api.threatbook.io/v2/file/query",
     "sha1":   "https://api.threatbook.io/v2/file/query",
@@ -20,6 +21,7 @@ API_URLS = {
 WEB_URLS = {
     "ip":     "https://i.threatbook.io/research/{ioc}",
     "domain": "https://i.threatbook.io/research/{ioc}",
+    "url":    "https://i.threatbook.io/research/{ioc}",
     "hash":   "https://i.threatbook.io/research/{ioc}",
     "md5":    "https://i.threatbook.io/research/{ioc}",
     "sha1":   "https://i.threatbook.io/research/{ioc}",

@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import METADEFENDER_API_KEY, REQUEST_TIMEOUT
 
-WEB_URL = "https://metadefender.opswat.com/results/file/{ioc}/regular/overview"
+WEB_URL = "https://metadefender.com/results/hash/{ioc}"
 
 def query(ioc: str, ioc_type: str) -> dict:
     """
