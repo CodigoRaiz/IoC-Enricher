@@ -19,6 +19,7 @@ GREYNOISE_API_KEY        = os.getenv("GREYNOISE_API_KEY", "")
 
 # ── Hashes / Archivos ──
 METADEFENDER_API_KEY     = os.getenv("METADEFENDER_API_KEY", "")
+MALWAREBAZAAR_API_KEY    = os.getenv("MALWAREBAZAAR_API_KEY", "")
 
 # ── Threat Intelligence ──
 ALIENVAULT_OTX_KEY       = os.getenv("ALIENVAULT_OTX_KEY", "")

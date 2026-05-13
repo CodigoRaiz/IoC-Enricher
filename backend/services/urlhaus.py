@@ -4,7 +4,7 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import REQUEST_TIMEOUT
+from config import REQUEST_TIMEOUT, MALWAREBAZAAR_API_KEY
 
 WEB_URL = "https://urlhaus.abuse.ch/browse.php?search={ioc}"
 
@@ -21,6 +21,10 @@ def query(ioc: str, ioc_type: str) -> dict:
         }
 
     try:
+        headers = {}
+        if MALWAREBAZAAR_API_KEY:
+            headers["Auth-Key"] = MALWAREBAZAAR_API_KEY
+
         # URLhaus acepta tanto URLs como hosts
         if ioc_type == "url":
             data_payload = {"url": ioc}
@@ -31,20 +35,23 @@ def query(ioc: str, ioc_type: str) -> dict:
 
         resp = requests.post(
             api_url,
+            headers=headers,
             data=data_payload,
             timeout=REQUEST_TIMEOUT
         )
 
         if resp.status_code == 200:
             data          = resp.json()
+            print(f"DEBUG URLhaus: {data}")
             query_status  = data.get("query_status", "no_results")
-            urls_count    = data.get("urls_count", 0)
+            urls_count = int(data.get("url_count", data.get("urls_count", 0)))
             threat        = data.get("threat", "N/A")
             tags          = data.get("tags", [])
             tags_str      = ", ".join(tags) if tags else "Sin tags"
 
             # Lógica de veredicto
-            if query_status == "ismalware" or urls_count > 0:
+            threat = data.get("threat", "")
+            if query_status == "ismalware" or urls_count > 0 or threat not in ["", "N/A", None]:
                 verdict = "malicious"
             elif query_status == "suspicious":
                 verdict = "suspicious"
