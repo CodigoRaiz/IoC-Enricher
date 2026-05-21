@@ -1,4 +1,4 @@
-# threatbook.py — Integración con ThreatBook API
+# threatbook.py — Integración con ThreatBook CTI API
 import requests
 import sys
 import os
@@ -6,34 +6,47 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import THREATBOOK_API_KEY, REQUEST_TIMEOUT
 
-# URLs de la API por tipo de IoC
-API_URLS = {
-    "ip":     "https://api.threatbook.io/v2/ip/query",
-    "domain": "https://api.threatbook.io/v2/domain/query",
-    "url":    "https://api.threatbook.io/v2/url/query",
-    "hash":   "https://api.threatbook.io/v2/file/query",
-    "md5":    "https://api.threatbook.io/v2/file/query",
-    "sha1":   "https://api.threatbook.io/v2/file/query",
-    "sha256": "https://api.threatbook.io/v2/file/query",
-}
-
 # URLs públicas por tipo de IoC
 WEB_URLS = {
     "ip":     "https://i.threatbook.io/research/{ioc}",
     "domain": "https://i.threatbook.io/research/{ioc}",
-    "url":    "https://i.threatbook.io/research/{ioc}",
-    "hash":   "https://i.threatbook.io/research/{ioc}",
-    "md5":    "https://i.threatbook.io/research/{ioc}",
-    "sha1":   "https://i.threatbook.io/research/{ioc}",
-    "sha256": "https://i.threatbook.io/research/{ioc}",
+    "url":    "",
+    "hash":   "",
+    "md5":    "",
+    "sha1":   "",
+    "sha256": "",
 }
 
 def query(ioc: str, ioc_type: str) -> dict:
     """
-    Consulta ThreatBook para IPs, dominios y hashes.
-    Retorna veredicto, detalle y URL pública.
+    Consulta ThreatBook CTI.
+    - IPs: usa la API gratuita (50 req/día)
+    - Otros tipos: solo botón Ver en web (requiere plan Premium)
     """
     web_url = WEB_URLS.get(ioc_type, "").format(ioc=ioc)
+
+    # Solo IPs usan la API gratuita
+    if ioc_type == "ip":
+        pass  # continúa con la API
+    elif ioc_type == "domain":
+        return {
+            "verdict": "unknown",
+            "detail":  "Consulta manual disponible — haz clic en 'Ver en web'",
+            "web_url": web_url
+        }
+    else:
+        return {
+            "verdict": "unknown",
+            "detail":  "ThreatBook solo soporta IPs y Dominios en el plan gratuito",
+            "web_url": ""
+        }
+
+    # Si es URL, extraer el dominio para buscar en ThreatBook
+    if ioc_type == "url":
+        from urllib.parse import urlparse
+        parsed = urlparse(ioc)
+        ioc = parsed.netloc or ioc
+        web_url = WEB_URLS.get("domain", "").format(ioc=ioc)
 
     if not THREATBOOK_API_KEY:
         return {
@@ -42,48 +55,43 @@ def query(ioc: str, ioc_type: str) -> dict:
             "web_url": web_url
         }
 
-    api_url = API_URLS.get(ioc_type, "")
-    if not api_url:
-        return {
-            "verdict": "unknown",
-            "detail":  f"Tipo de IoC no soportado: {ioc_type}",
-            "web_url": ""
-        }
-
     try:
         params = {
             "apikey":   THREATBOOK_API_KEY,
-            "resource": ioc,
+            "resource": ioc
         }
         resp = requests.post(
-            api_url,
+            "https://api.threatbook.io/v1/community/ip",
             params=params,
             timeout=REQUEST_TIMEOUT
         )
 
         if resp.status_code == 200:
             data      = resp.json()
-            resp_code = data.get("response_code", -1)
-
-            if resp_code != 0:
+            msg = data.get("msg", "")
+            if msg != "Success":
                 return {
                     "verdict": "unknown",
-                    "detail":  f"Error ThreatBook: {data.get('message', 'Sin mensaje')}",
+                    "detail":  f"Error ThreatBook: {msg}",
                     "web_url": web_url
                 }
 
             ioc_data  = data.get("data", {})
-            judgments = ioc_data.get("judgments", [])
+            summary   = ioc_data.get("summary", {})
+            basic     = ioc_data.get("basic", {})
+            judgments = summary.get("judgments", [])
+            country   = basic.get("location", {}).get("country", "N/A")
 
             judgment_str = ", ".join(judgments) if judgments else "Sin juicio"
-            if any(j in ["Malicious", "C2", "Botnet", "Phishing"] for j in judgments):
+
+            if any(j in ["Malicious", "C2", "Botnet", "Phishing", "Spam"] for j in judgments):
                 verdict = "malicious"
             elif judgments:
                 verdict = "suspicious"
             else:
                 verdict = "clean"
 
-            detail = f"Juicio: {judgment_str}"
+            detail = f"Juicio: {judgment_str} · País: {country}"
 
             return {
                 "verdict": verdict,
@@ -94,13 +102,13 @@ def query(ioc: str, ioc_type: str) -> dict:
         elif resp.status_code == 401:
             return {
                 "verdict": "unknown",
-                "detail":  "API key de ThreatBook inválida",
+                "detail":  "API key de ThreatBook inválida o sin permisos",
                 "web_url": web_url
             }
         else:
             return {
                 "verdict": "unknown",
-                "detail":  f"Error HTTP {resp.status_code} — {resp.text[:100]}",
+                "detail":  f"Error HTTP {resp.status_code}",
                 "web_url": web_url
             }
 
