@@ -575,9 +575,9 @@ footer {
 
   <!-- STEP 3 — SOURCES -->
   <div class="section">
-    <div class="section-label">Paso 3 — Fuentes de consulta (máximo 2)</div>
+    <div class="section-label">Paso 3 — Fuentes de consulta</div>
     <div class="sources-grid" id="sources-grid"></div>
-    <div class="max-warning" id="max-warning">⚠ Máximo 2 fuentes permitidas — deselecciona una antes de elegir otra</div>
+    <div class="max-warning" id="max-warning"></div>
   </div>
 
   <!-- ANALYZE BUTTON -->
@@ -671,7 +671,7 @@ function updateSourceCards() {
     if (!enabled) card.classList.add("disabled");
   });
 
-  document.getElementById("max-warning").classList.remove("visible");
+
   updateAnalyzeBtn();
 }
 
@@ -689,11 +689,6 @@ function toggleSource(id) {
     card.classList.remove("selected");
     document.getElementById(`chk-${id}`).innerHTML = "";
   } else {
-    if (selectedSources.length >= 2) {
-      document.getElementById("max-warning").classList.add("visible");
-      return;
-    }
-    document.getElementById("max-warning").classList.remove("visible");
     selectedSources.push(id);
     card.classList.add("selected");
   }
