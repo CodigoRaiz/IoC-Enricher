@@ -2,51 +2,51 @@
 import requests
 import sys
 import os
+from urllib.parse import urlparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import THREATBOOK_API_KEY, REQUEST_TIMEOUT
 
-# URLs públicas por tipo de IoC
+# URLs públicas por tipo de IoC (solo IP y Domain tienen URL pública)
 WEB_URLS = {
     "ip":     "https://i.threatbook.io/research/{ioc}",
     "domain": "https://i.threatbook.io/research/{ioc}",
-    "url":    "",
-    "hash":   "",
-    "md5":    "",
-    "sha1":   "",
-    "sha256": "",
 }
 
 def query(ioc: str, ioc_type: str) -> dict:
     """
     Consulta ThreatBook CTI.
-    - IPs: usa la API gratuita (50 req/día)
-    - Otros tipos: solo botón Ver en web (requiere plan Premium)
+    - IPs: consulta API gratuita de IPs
+    - Dominios: consulta API gratuita de dominios vía endpoint /v1/community/domain
+    - URLs sin http://: se tratan como dominio
+    - URLs con http:// o https://: no soportadas (retorna unknown)
+    - Hashes (md5, sha1, sha256): no soportados
     """
-    web_url = WEB_URLS.get(ioc_type, "").format(ioc=ioc)
 
-    # Solo IPs usan la API gratuita
-    if ioc_type == "ip":
-        pass  # continúa con la API
-    elif ioc_type == "domain":
+    # ── Hashes: no soportados ──
+    if ioc_type in ["hash", "md5", "sha1", "sha256"]:
         return {
             "verdict": "unknown",
-            "detail":  "Consulta manual disponible — haz clic en 'Ver en web'",
-            "web_url": web_url
-        }
-    else:
-        return {
-            "verdict": "unknown",
-            "detail":  "ThreatBook solo soporta IPs y Dominios en el plan gratuito",
+            "detail":  "ThreatBook no soporta hashes",
             "web_url": ""
         }
 
-    # Si es URL, extraer el dominio para buscar en ThreatBook
+    # ── URLs: verificar si trae o no http ──
     if ioc_type == "url":
-        from urllib.parse import urlparse
-        parsed = urlparse(ioc)
-        ioc = parsed.netloc or ioc
-        web_url = WEB_URLS.get("domain", "").format(ioc=ioc)
+        if ioc.startswith("http://") or ioc.startswith("https://"):
+            # URL completa → no soportada, pero mostrar web_url con el dominio extraído
+            parsed = urlparse(ioc)
+            domain = parsed.netloc or parsed.path
+            return {
+                "verdict": "unknown",
+                "detail":  "ThreatBook no soporta URLs completas",
+                "web_url": WEB_URLS.get("domain", "").format(ioc=domain)
+            }
+        else:
+            # No tiene http:// → es un dominio desnudo, tratarlo como dominio
+            ioc_type = "domain"
+
+    web_url = WEB_URLS.get(ioc_type, "").format(ioc=ioc)
 
     if not THREATBOOK_API_KEY:
         return {
@@ -55,13 +55,29 @@ def query(ioc: str, ioc_type: str) -> dict:
             "web_url": web_url
         }
 
+    # Solo IPs tienen API gratuita
+    if ioc_type == "domain":
+        return {
+            "verdict": "unknown",
+            "detail":  "Consulta manual disponible — haz clic en 'Ver en web'",
+            "web_url": web_url
+        }
+    elif ioc_type == "ip":
+        api_url = "https://api.threatbook.io/v1/community/ip"
+    else:
+        return {
+            "verdict": "unknown",
+            "detail":  "ThreatBook solo soporta IPs y Dominios",
+            "web_url": ""
+        }
+
     try:
         params = {
             "apikey":   THREATBOOK_API_KEY,
             "resource": ioc
         }
         resp = requests.post(
-            "https://api.threatbook.io/v1/community/ip",
+            api_url,
             params=params,
             timeout=REQUEST_TIMEOUT
         )
