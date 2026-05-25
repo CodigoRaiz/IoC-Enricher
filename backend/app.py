@@ -170,6 +170,19 @@ def health():
         "timestamp":    datetime.now().isoformat()
     })
 
+@app.route("/clear-cache", methods=["POST"])
+def clear_cache():
+    """Limpia completamente la tabla de caché en la base de datos."""
+    import sqlite3
+    from pathlib import Path
+    DB_PATH = Path(__file__).parent.parent / "data" / "feeds.db"
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("DELETE FROM ioc_cache")
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok", "message": "Caché limpiado"})
+
+
 @app.route("/")
 def frontend():
     """Sirve el frontend desde Flask."""

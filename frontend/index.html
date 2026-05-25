@@ -95,6 +95,22 @@ header {
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
+.btn-clear-cache {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 8px;
+}
+.btn-clear-cache:hover {
+  background: rgba(0,212,255,0.1);
+}
+
 /* ── SECCIONES ── */
 .section { margin-bottom: 28px; }
 
@@ -530,6 +546,7 @@ footer {
       </div>
     </div>
     <div class="header-right">
+      <button class="btn-clear-cache" onclick="clearCache()">🗑 Limpiar caché</button>
       <div class="dot"></div>
       Sistema operativo
     </div>
@@ -898,6 +915,26 @@ async function updateCacheHits() {
     const data = await resp.json();
     document.getElementById("cache-hits").textContent = data.cache_hits_today || 0;
   } catch {}
+}
+
+// ── LIMPIAR CACHÉ ──
+async function clearCache() {
+  const btn = document.querySelector(".btn-clear-cache");
+  btn.disabled = true;
+  try {
+    const resp = await fetch("http://localhost:5001/clear-cache", { method: "POST" });
+    const data = await resp.json();
+    if (data.status === "ok") {
+      btn.textContent = "✓ Caché limpiado";
+      setTimeout(() => { btn.textContent = "🗑 Limpiar caché"; btn.disabled = false; }, 2000);
+    } else {
+      btn.textContent = "⚠ Error al limpiar caché";
+      setTimeout(() => { btn.disabled = false; btn.textContent = "🗑 Limpiar caché"; }, 2000);
+    }
+  } catch {
+    btn.textContent = "⚠ Error al limpiar caché";
+    setTimeout(() => { btn.disabled = false; btn.textContent = "🗑 Limpiar caché"; }, 2000);
+  }
 }
 
 // ── INIT ──
