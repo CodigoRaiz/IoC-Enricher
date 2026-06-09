@@ -12,3 +12,10 @@ data/feeds.db
 
 # Variables de entorno
 .env
+# Sesiones y caché de APIs
+backend/data/sessions/
+backend/backend/data/sessions/
+
+# Archivos compilados Python
+__pycache__/
+*.pyc
