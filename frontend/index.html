@@ -618,6 +618,7 @@ footer {
       <div class="export-btns">
         <button class="btn-export" onclick="copyReport()">📋 Copiar reporte</button>
         <button class="btn-export" onclick="downloadReport()">⬇ Descargar .txt</button>
+        <button class="btn-export" id="btn-word-report" style="display:none" onclick="downloadWordReport()">📄 Generar Reporte Word</button>
       </div>
     </div>
     <div id="results-container"></div>
@@ -840,6 +841,7 @@ function renderResults(results) {
     container.appendChild(card);
   });
 
+  document.getElementById("btn-word-report").style.display = "";
   document.getElementById("results-section").style.display = "block";
   document.getElementById("results-section").scrollIntoView({ behavior: "smooth" });
 }
@@ -906,6 +908,57 @@ function downloadReport() {
   a.download = `ioc_report_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ── GENERAR REPORTE WORD ──
+async function downloadWordReport() {
+  const btn = document.getElementById("btn-word-report");
+  const originalText = btn.textContent;
+  btn.textContent = "⏳ Generando reporte...";
+  btn.disabled = true;
+
+  try {
+    const result = lastResults[0];
+    const web_urls = {};
+    SOURCES.forEach(source => {
+      if (result.sources[source.id] && result.sources[source.id].web_url) {
+        web_urls[source.id] = result.sources[source.id].web_url;
+      }
+    });
+
+    const payload = {
+      ioc: result.ioc,
+      ioc_type: result.type,
+      results: result.sources,
+      ai_summary: result.ai_summary,
+      web_urls: web_urls
+    };
+
+    const resp = await fetch("http://localhost:5001/generate-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => null);
+      throw new Error(errData?.error || `Error del servidor (${resp.status})`);
+    }
+
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_${result.ioc.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+  } catch (err) {
+    alert("⚠ Error al generar reporte Word: " + err.message);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 }
 
 // ── CACHE HITS ──

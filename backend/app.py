@@ -2,9 +2,11 @@
 import os
 import sys
 import time
+import io
+import atexit
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 
 # Agregar el directorio backend al path
@@ -21,9 +23,14 @@ from services import (
     malwarebazaar, metadefender, hybrid_analysis, misp
 )
 from services.ai_summary import generate_summary
+from services.screenshot_service import take_screenshot, close_browser
+from services.report_generator import generate_word_report
 
 app = Flask(__name__)
 CORS(app)
+
+# Registrar cierre limpio del navegador Playwright al detener el servidor
+atexit.register(close_browser)
 
 # Inicializar base de datos
 init_db()
@@ -188,6 +195,71 @@ def frontend():
     """Sirve el frontend desde Flask."""
     frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
     return send_from_directory(frontend_path, "index.html")
+@app.route("/generate-report", methods=["POST"])
+def generate_report():
+    """
+    Endpoint POST — genera un reporte .docx con screenshots de las URLs de cada fuente.
+    Recibe JSON: { "ioc", "ioc_type", "results", "ai_summary", "web_urls": {...} }
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Cuerpo JSON requerido"}), 400
+
+    ioc = data.get("ioc", "")
+    ioc_type = data.get("ioc_type", "")
+    results = data.get("results", {})
+    ai_summary = data.get("ai_summary", "")
+    web_urls = data.get("web_urls", {})
+
+    if not results:
+        return jsonify({"error": "results no puede estar vacío"}), 400
+
+    # Tomar screenshots en paralelo usando ThreadPoolExecutor
+    # take_screenshot es async, por lo que se ejecuta con asyncio.run() dentro del worker
+    screenshots: dict = {}
+    import logging
+    logging.basicConfig(level=logging.INFO)
+
+    with ThreadPoolExecutor(max_workers=min(len(web_urls), 8)) as executor:
+        future_map = {}
+        for source_name, url in web_urls.items():
+            if url:
+                source_data = results.get(source_name, {})
+                future = executor.submit(
+                    lambda sn=source_name, u=url, sd=source_data: _run_screenshot(u, sn, sd)
+                )
+                future_map[future] = source_name
+
+        for future in as_completed(future_map):
+            source_name = future_map[future]
+            try:
+                result = future.result()
+                screenshots[source_name] = result
+            except Exception as e:
+                logging.error(f"Screenshot falló para {source_name}: {e}")
+                screenshots[source_name] = None
+
+    # Generar el documento .docx
+    docx_bytes = generate_word_report(ioc, ioc_type, results, ai_summary, screenshots)
+
+    # Nombre del archivo con fecha
+    date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"IOC_Report_{ioc}_{date_str}.docx"
+
+    return send_file(
+        io.BytesIO(docx_bytes),
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+def _run_screenshot(url: str, source_name: str, source_data: dict = None) -> bytes:
+    """Ejecuta take_screenshot (async) de forma síncrona dentro de un hilo."""
+    import asyncio
+    return asyncio.run(take_screenshot(url, source_name, source_data))
+
+
 if __name__ == "__main__":
     print("🚀 IOC Enricher — Backend iniciando...")
     print("📡 Servidor corriendo en http://localhost:5001")
