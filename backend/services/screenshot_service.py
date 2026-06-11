@@ -228,6 +228,16 @@ async def take_screenshot(url: str, source_name: str, source_data: dict = None) 
                 await page.wait_for_selector(".general-info", timeout=15000)
             except PlaywrightTimeout:
                 pass  # Take screenshot anyway on timeout
+        elif source_name == "urlhaus":
+            try:
+                await page.wait_for_selector("table, .card, .result", timeout=15000)
+            except PlaywrightTimeout:
+                pass
+        elif source_name == "google_safebrowsing":
+            try:
+                await page.wait_for_selector("#main-content, .sr-only, [role='main']", timeout=15000)
+            except PlaywrightTimeout:
+                pass
         else:
             pass  # No additional wait for other sources
 
