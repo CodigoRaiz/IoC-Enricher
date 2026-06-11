@@ -7,7 +7,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import REQUEST_TIMEOUT
 
-WEB_URL = "https://www.phishtank.com/phish_search.php?target={ioc}"
+WEB_URL = "https://www.phishtank.com/phish_search.php?valid=y&active=y&Search=Search&url={ioc}"
 
 def query(ioc: str, ioc_type: str) -> dict:
     """

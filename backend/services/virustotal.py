@@ -3,6 +3,7 @@ import requests
 import base64
 import sys
 import os
+import urllib.parse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import VIRUSTOTAL_API_KEY, REQUEST_TIMEOUT
@@ -40,13 +41,15 @@ def query(ioc: str, ioc_type: str) -> dict:
             "web_url": web_url
         }
     print(f"DEBUG virustotal: ioc_type={ioc_type}, ioc={ioc}")
-   # Para URLs, extraer el dominio y consultar como dominio
+    # Para URLs, extraer el dominio y consultar como dominio
     if ioc_type == "url":
         from urllib.parse import urlparse
         parsed  = urlparse(ioc)
         domain  = parsed.netloc or parsed.path
         api_url = f"https://www.virustotal.com/api/v3/domains/{domain}"
-        web_url = f"https://www.virustotal.com/gui/domain/{domain}"
+        # VT requiere base64 URL-safe sin padding para la URL pública
+        url_b64 = base64.urlsafe_b64encode(ioc.encode()).decode().rstrip("=")
+        web_url = f"https://www.virustotal.com/gui/url/{url_b64}"
     else:
         api_url = API_URLS.get(ioc_type, "").format(ioc=ioc)
         web_url = WEB_URLS.get(ioc_type, "").format(ioc=ioc)
