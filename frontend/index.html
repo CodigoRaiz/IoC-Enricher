@@ -646,10 +646,10 @@ const SOURCES = [
   { id: "urlhaus",             name: "URLhaus",              tags: "Dominio · URL",        types: ["domain","url","auto"] },
   { id: "phishtank",           name: "PhishTank",            tags: "Dominio · URL",        types: ["domain","url","auto"] },
   { id: "google_safebrowsing", name: "Google Safe Browsing", tags: "Dominio · URL",        types: ["domain","url","auto"] },
-  { id: "malwarebazaar",       name: "MalwareBazaar",        tags: "Hash",                 types: ["hash","auto"] },
-  { id: "metadefender",        name: "MetaDefender",         tags: "Hash",                 types: ["hash","auto"] },
-  { id: "hybrid_analysis",     name: "Hybrid Analysis",      tags: "Hash",                 types: ["hash","auto"] },
-  { id: "misp",                name: "MISP",                 tags: "IP · Dominio · Hash",  types: ["ip","domain","url","hash","auto"] },
+  { id: "malwarebazaar",       name: "MalwareBazaar",        tags: "Hash",                 types: ["md5","sha1","sha256","hash","auto"] },
+  { id: "metadefender",        name: "MetaDefender",         tags: "Hash",                 types: ["md5","sha1","sha256","hash","auto"] },
+  { id: "hybrid_analysis",     name: "Hybrid Analysis",      tags: "Hash",                 types: ["md5","sha1","sha256","hash","auto"] },
+  { id: "misp",                name: "MISP",                 tags: "IP · Dominio · Hash",  types: ["ip","domain","url","md5","sha1","sha256","hash","auto"] },
 ];
 
 let selectedSources = [];

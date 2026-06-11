@@ -181,7 +181,7 @@ def _build_analysis_text(ioc: str, ioc_type: str, results: dict) -> str:
             details.append(f"{source_name}: {detail}")
 
     # Sentence 1: What was analyzed
-    ioc_type_label = {"ip": "IP", "domain": "dominio", "url": "URL", "hash": "hash"}.get(ioc_type, ioc_type)
+    ioc_type_label = {"ip": "IP", "domain": "dominio", "url": "URL", "hash": "hash", "md5": "hash", "sha1": "hash", "sha256": "hash"}.get(ioc_type, ioc_type)
     sentences.append(
         f"Se realizó el análisis del {ioc_type_label} {ioc} utilizando "
         f"múltiples fuentes de inteligencia de amenazas."
@@ -575,7 +575,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     cell_evidencia.text = ""
 
     # Title with IoC type
-    ioc_type_spanish = {"ip": "IP", "domain": "Dominio", "url": "URL", "hash": "Hash"}.get(ioc_type, ioc_type)
+    ioc_type_spanish = {"ip": "IP", "domain": "Dominio", "url": "URL", "hash": "Hash", "md5": "Hash", "sha1": "Hash", "sha256": "Hash"}.get(ioc_type, ioc_type)
     _add_paragraph_to_cell(cell_evidencia, f"Categorización {ioc_type_spanish}:",
                            bold=True, size=11, space_after=6)
 
