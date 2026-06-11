@@ -27,8 +27,8 @@ def detect_ioc_type(ioc: str) -> str:
         if all(0 <= int(p) <= 255 for p in parts):
             return "ip"
 
-    # URL (empieza con http:// o https://)
-    if re.match(r"https?://", ioc, re.IGNORECASE):
+    # URL (empieza con http:// o https://, seguido de al menos un carácter)
+    if re.fullmatch(r"https?://\S+", ioc, re.IGNORECASE):
         return "url"
 
     # Dominio (formato general)

@@ -150,8 +150,9 @@ def analyze():
         # Procesar cada IoC
         results = []
         for ioc in ioc_list:
-            # Detectar tipo si es auto
-            if ioc_type_req == "auto":
+            # Detectar tipo
+            # "auto" → detectar siempre; "domain" → desambiguar entre dominio y URL
+            if ioc_type_req in ("auto", "domain"):
                 ioc_type = detect_ioc_type(ioc)
             else:
                 ioc_type = ioc_type_req
