@@ -463,6 +463,14 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
                        alignment=WD_ALIGN_PARAGRAPH.CENTER)
         _set_cell_shading(sub_table.rows[0].cells[idx], "E0E0E0")
 
+    # Set sub-table column widths: total = 3.5+2.5+3.5+4.0 = 13.5cm
+    sub_col_widths = [Cm(3.5), Cm(2.5), Cm(3.5), Cm(4.0)]
+    for row in sub_table.rows:
+        for idx in range(4):
+            row.cells[idx].width = sub_col_widths[idx]
+    for idx in range(4):
+        sub_table.columns[idx].width = sub_col_widths[idx]
+
     # Data row (pre-fill what's available)
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     data_values = [
@@ -617,7 +625,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
             p_img = cell_evidencia.add_paragraph()
             p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run_img = p_img.add_run()
-            run_img.add_picture(image_stream, width=Cm(15))
+            run_img.add_picture(image_stream, width=Cm(12.5))
             # Spacer after image
             sp = cell_evidencia.add_paragraph()
             sp.paragraph_format.space_after = Pt(4)
