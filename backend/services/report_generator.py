@@ -9,6 +9,11 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn, nsdecls
 from docx.oxml import parse_xml
+from PIL import Image
+
+# Absolute paths based on script location
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
 
 VERDICT_LABELS = {
@@ -353,11 +358,15 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     header_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     _set_table_borders(header_table)
 
-    # Left cell: Company logo placeholder
+    # Left cell: Axity logo
     cell_left = header_table.rows[0].cells[0]
-    _set_cell_shading(cell_left, "D9D9D9")
-    _set_cell_text(cell_left, "LOGO EMPRESA", bold=True, size=12,
-                   color="808080", alignment=WD_ALIGN_PARAGRAPH.CENTER)
+    cell_left.text = ""
+    cell_left.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    p_left = cell_left.paragraphs[0]
+    p_left.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    axity_path = os.path.join(ASSETS_DIR, "Axity_Logo.png")
+    run_left = p_left.add_run()
+    run_left.add_picture(axity_path, width=Cm(4))
 
     # Center cell: Title
     cell_center = header_table.rows[0].cells[1]
@@ -366,11 +375,19 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     _add_paragraph_to_cell(cell_center, "IOC ENRICHER", bold=False, size=11,
                            color="555555", alignment=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
-    # Right cell: Tool logo placeholder
+    # Right cell: Cortex logo (converted from WebP to PNG in memory)
     cell_right = header_table.rows[0].cells[2]
-    _set_cell_shading(cell_right, "D9D9D9")
-    _set_cell_text(cell_right, "LOGO HERRAMIENTA", bold=True, size=12,
-                   color="808080", alignment=WD_ALIGN_PARAGRAPH.CENTER)
+    cell_right.text = ""
+    cell_right.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    p_right = cell_right.paragraphs[0]
+    p_right.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    cortex_webp_path = os.path.join(ASSETS_DIR, "Cortex-logo.webp")
+    img = Image.open(cortex_webp_path)
+    cortex_buf = BytesIO()
+    img.save(cortex_buf, format="PNG")
+    cortex_buf.seek(0)
+    run_right = p_right.add_run()
+    run_right.add_picture(cortex_buf, width=Cm(4))
 
     # Set header column widths
     for row in header_table.rows:
