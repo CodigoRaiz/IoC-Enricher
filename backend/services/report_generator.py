@@ -67,7 +67,7 @@ def _set_cell_margins(cell, top: int = 0, bottom: int = 0, left: int = 0, right:
 
 
 def _set_cell_text(cell, text: str, bold: bool = False, size: int = 10,
-                   color: str = None, alignment: int = None, font_name: str = "Calibri"):
+                   color: str = None, alignment: int = None, font_name: str = "Arial"):
     """Set text in a table cell with formatting. Clears existing content."""
     cell.text = ""
     p = cell.paragraphs[0]
@@ -84,7 +84,7 @@ def _set_cell_text(cell, text: str, bold: bool = False, size: int = 10,
 
 
 def _add_paragraph_to_cell(cell, text: str, bold: bool = False, size: int = 10,
-                           color: str = None, alignment: int = None, font_name: str = "Calibri",
+                           color: str = None, alignment: int = None, font_name: str = "Arial",
                            space_after: int = 2):
     """Add a new paragraph to a cell (preserving existing content)."""
     p = cell.add_paragraph()
@@ -103,7 +103,7 @@ def _add_paragraph_to_cell(cell, text: str, bold: bool = False, size: int = 10,
 
 
 def _add_bullet_to_cell(cell, text: str, bold_prefix: str = None, size: int = 10,
-                        font_name: str = "Calibri"):
+                        font_name: str = "Arial"):
     """Add a bullet point paragraph to a cell."""
     p = cell.add_paragraph()
     p.paragraph_format.space_before = Pt(1)
@@ -349,7 +349,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # -- Default style --
     style = doc.styles["Normal"]
-    style.font.name = "Calibri"
+    style.font.name = "Arial"
     style.font.size = Pt(11)
     style.paragraph_format.space_after = Pt(4)
     style.paragraph_format.line_spacing = WD_LINE_SPACING.SINGLE
@@ -695,7 +695,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         "ya que nos ayuda a mejorar continuamente nuestros procesos de análisis."
     )
     note_run.font.size = Pt(8)
-    note_run.font.name = "Calibri"
+    note_run.font.name = "Arial"
     note_run.italic = True
     note_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
 
@@ -708,7 +708,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         run = p.add_run("IOC Enricher — Uso interno SOC  |  Pág. ")
         run.font.size = Pt(8)
         run.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
-        run.font.name = "Calibri"
+        run.font.name = "Arial"
         # Page number field
         fld_char_begin = parse_xml(f'<w:fldChar {nsdecls("w")} w:fldCharType="begin"/>')
         run_fld = p.add_run()

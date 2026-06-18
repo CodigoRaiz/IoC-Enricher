@@ -1,0 +1,58 @@
+[1mdiff --git a/backend/services/report_generator.py b/backend/services/report_generator.py[m
+[1mindex 1e7b6a8..659dc19 100644[m
+[1m--- a/backend/services/report_generator.py[m
+[1m+++ b/backend/services/report_generator.py[m
+[36m@@ -67,7 +67,7 @@[m [mdef _set_cell_margins(cell, top: int = 0, bottom: int = 0, left: int = 0, right:[m
+ [m
+ [m
+ def _set_cell_text(cell, text: str, bold: bool = False, size: int = 10,[m
+[31m-                   color: str = None, alignment: int = None, font_name: str = "Calibri"):[m
+[32m+[m[32m                   color: str = None, alignment: int = None, font_name: str = "Arial"):[m
+     """Set text in a table cell with formatting. Clears existing content."""[m
+     cell.text = ""[m
+     p = cell.paragraphs[0][m
+[36m@@ -84,7 +84,7 @@[m [mdef _set_cell_text(cell, text: str, bold: bool = False, size: int = 10,[m
+ [m
+ [m
+ def _add_paragraph_to_cell(cell, text: str, bold: bool = False, size: int = 10,[m
+[31m-                           color: str = None, alignment: int = None, font_name: str = "Calibri",[m
+[32m+[m[32m                           color: str = None, alignment: int = None, font_name: str = "Arial",[m
+                            space_after: int = 2):[m
+     """Add a new paragraph to a cell (preserving existing content)."""[m
+     p = cell.add_paragraph()[m
+[36m@@ -103,7 +103,7 @@[m [mdef _add_paragraph_to_cell(cell, text: str, bold: bool = False, size: int = 10,[m
+ [m
+ [m
+ def _add_bullet_to_cell(cell, text: str, bold_prefix: str = None, size: int = 10,[m
+[31m-                        font_name: str = "Calibri"):[m
+[32m+[m[32m                        font_name: str = "Arial"):[m
+     """Add a bullet point paragraph to a cell."""[m
+     p = cell.add_paragraph()[m
+     p.paragraph_format.space_before = Pt(1)[m
+[36m@@ -349,7 +349,7 @@[m [mdef generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str[m
+ [m
+     # -- Default style --[m
+     style = doc.styles["Normal"][m
+[31m-    style.font.name = "Calibri"[m
+[32m+[m[32m    style.font.name = "Arial"[m
+     style.font.size = Pt(11)[m
+     style.paragraph_format.space_after = Pt(4)[m
+     style.paragraph_format.line_spacing = WD_LINE_SPACING.SINGLE[m
+[36m@@ -695,7 +695,7 @@[m [mdef generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str[m
+         "ya que nos ayuda a mejorar continuamente nuestros procesos de análisis."[m
+     )[m
+     note_run.font.size = Pt(8)[m
+[31m-    note_run.font.name = "Calibri"[m
+[32m+[m[32m    note_run.font.name = "Arial"[m
+     note_run.italic = True[m
+     note_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)[m
+ [m
+[36m@@ -708,7 +708,7 @@[m [mdef generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str[m
+         run = p.add_run("IOC Enricher — Uso interno SOC  |  Pág. ")[m
+         run.font.size = Pt(8)[m
+         run.font.color.rgb = RGBColor(0x88, 0x88, 0x88)[m
+[31m-        run.font.name = "Calibri"[m
+[32m+[m[32m        run.font.name = "Arial"[m
+         # Page number field[m
+         fld_char_begin = parse_xml(f'<w:fldChar {nsdecls("w")} w:fldCharType="begin"/>')[m
+         run_fld = p.add_run()[m
