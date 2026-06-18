@@ -51,6 +51,21 @@ def _set_cell_border(cell, top=None, bottom=None, left=None, right=None):
     tcPr.append(tcBorders)
 
 
+def _set_cell_margins(cell, top: int = 0, bottom: int = 0, left: int = 0, right: int = 0):
+    """Set internal cell margins (padding) in twips (twentieths of a point)."""
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    tcMar = parse_xml(
+        f'<w:tcMar {nsdecls("w")}>'
+        f'  <w:top w:w="{top}" w:type="dxa"/>'
+        f'  <w:bottom w:w="{bottom}" w:type="dxa"/>'
+        f'  <w:left w:w="{left}" w:type="dxa"/>'
+        f'  <w:right w:w="{right}" w:type="dxa"/>'
+        f'</w:tcMar>'
+    )
+    tcPr.append(tcMar)
+
+
 def _set_cell_text(cell, text: str, bold: bool = False, size: int = 10,
                    color: str = None, alignment: int = None, font_name: str = "Calibri"):
     """Set text in a table cell with formatting. Clears existing content."""
@@ -462,6 +477,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         _set_cell_text(sub_table.rows[0].cells[idx], hdr, bold=True, size=8,
                        alignment=WD_ALIGN_PARAGRAPH.CENTER)
         _set_cell_shading(sub_table.rows[0].cells[idx], "E0E0E0")
+        _set_cell_margins(sub_table.rows[0].cells[idx], top=40, bottom=40, left=60, right=60)
 
     # Set sub-table column widths: total = 3.5+2.5+3.5+4.0 = 13.5cm
     sub_col_widths = [Cm(3.5), Cm(2.5), Cm(3.5), Cm(4.0)]
@@ -482,6 +498,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     for idx, val in enumerate(data_values):
         _set_cell_text(sub_table.rows[1].cells[idx], val, size=8,
                        alignment=WD_ALIGN_PARAGRAPH.CENTER)
+        _set_cell_margins(sub_table.rows[1].cells[idx], top=40, bottom=40, left=60, right=60)
 
     # Add sub-table as inline content in the cell
     # We need to move the sub_table into cell_content
