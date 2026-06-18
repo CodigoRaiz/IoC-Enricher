@@ -372,7 +372,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     cell_center = header_table.rows[0].cells[1]
     _set_cell_text(cell_center, "Reporte de Evento", bold=True, size=16,
                    alignment=WD_ALIGN_PARAGRAPH.CENTER)
-    _add_paragraph_to_cell(cell_center, "IOC ENRICHER", bold=False, size=11,
+    _add_paragraph_to_cell(cell_center, "CORTEX XDR", bold=False, size=11,
                            color="555555", alignment=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # Right cell: Cortex logo (converted from WebP to PNG in memory)
@@ -406,11 +406,11 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Row 1: EVENTO
     _set_cell_text(meta_table.rows[0].cells[0], "EVENTO", bold=True, size=10)
-    _set_cell_text(meta_table.rows[0].cells[1], ioc, bold=False, size=10)
+    _set_cell_text(meta_table.rows[0].cells[1], "", bold=False, size=10)
 
     # Row 2: FUENTE
     _set_cell_text(meta_table.rows[1].cells[0], "FUENTE", bold=True, size=10)
-    _set_cell_text(meta_table.rows[1].cells[1], "IOC Enricher", bold=False, size=10)
+    _set_cell_text(meta_table.rows[1].cells[1], "", bold=False, size=10)
 
     # Row 3: CRITICIDAD (colored)
     _set_cell_text(meta_table.rows[2].cells[0], "CRITICIDAD", bold=True, size=10)
@@ -447,13 +447,13 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     analysis_text = _build_analysis_text(ioc, ioc_type, results)
     _add_paragraph_to_cell(cell_content, analysis_text, size=10, space_after=6)
 
-    # Sub-table inside: Fecha y Hora | Acción | IP Origen | IP Destino | Puerto Dest | Rule | Zona
-    sub_table = doc.add_table(rows=2, cols=7)
+    # Sub-table inside: Fecha y Hora | Acción | IP Origen | IP Destino
+    sub_table = doc.add_table(rows=2, cols=4)
     sub_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     _set_table_borders(sub_table)
 
     # Header row
-    sub_headers = ["Fecha y Hora", "Acción", "IP Origen", "IP Destino", "Puerto Dest", "Rule", "Zona"]
+    sub_headers = ["Fecha y Hora", "Acción", "IP Origen", "IP Destino"]
     for idx, hdr in enumerate(sub_headers):
         _set_cell_text(sub_table.rows[0].cells[idx], hdr, bold=True, size=8,
                        alignment=WD_ALIGN_PARAGRAPH.CENTER)
@@ -465,9 +465,6 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         now_str,
         "En análisis",
         ioc if ioc_type == "ip" else "",
-        "",
-        "",
-        "",
         ""
     ]
     for idx, val in enumerate(data_values):
