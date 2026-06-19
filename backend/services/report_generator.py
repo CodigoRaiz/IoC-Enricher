@@ -552,24 +552,28 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     doc.add_page_break()
 
     # ===================================================================
-    # PAGE 2 — IOC DATA TABLE
+    # PAGE 2 — IOC DATA TABLE (vertical: label | value)
     # ===================================================================
-    ioc_headers = ["DIR IP ORIGEN", "PUERTO ORIGEN", "DIR IP DESTINO", "PUERTO DESTINO"]
-    ioc_table = doc.add_table(rows=2, cols=4)
+    ioc_data = [
+        ("DIR IP ORIGEN",  ioc if ioc_type == "ip" else ""),
+        ("PUERTO ORIGEN",  ""),
+        ("DIR IP DESTINO", ""),
+        ("PUERTO DESTINO", ""),
+    ]
+    ioc_table = doc.add_table(rows=4, cols=2)
     ioc_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     _set_table_borders(ioc_table)
 
-    for idx, hdr in enumerate(ioc_headers):
-        _set_cell_text(ioc_table.rows[0].cells[idx], hdr, bold=True, size=8,
-                       alignment=WD_ALIGN_PARAGRAPH.CENTER)
-        _set_cell_shading(ioc_table.rows[0].cells[idx], "E0E0E0")
+    for row_idx, (label, value) in enumerate(ioc_data):
+        _set_cell_text(ioc_table.rows[row_idx].cells[0], label, bold=False, size=8)
+        _set_cell_text(ioc_table.rows[row_idx].cells[1], value, size=8)
 
-    # Pre-fill DIR IP ORIGEN with the analyzed IoC
-    _set_cell_text(ioc_table.rows[1].cells[0], ioc if ioc_type == "ip" else ioc,
-                   size=8, alignment=WD_ALIGN_PARAGRAPH.CENTER)
-    for idx in range(1, 4):
-        _set_cell_text(ioc_table.rows[1].cells[idx], "", size=8,
-                       alignment=WD_ALIGN_PARAGRAPH.CENTER)
+    # Set column widths
+    ioc_table.columns[0].width = Cm(5)
+    ioc_table.columns[1].width = Cm(12)
+    for row in ioc_table.rows:
+        row.cells[0].width = Cm(5)
+        row.cells[1].width = Cm(12)
 
     doc.add_paragraph()  # spacer
 
