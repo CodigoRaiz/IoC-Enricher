@@ -568,12 +568,12 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         _set_cell_text(ioc_table.rows[row_idx].cells[0], label, bold=False, size=8)
         _set_cell_text(ioc_table.rows[row_idx].cells[1], value, size=8)
 
-    # Set column widths
-    ioc_table.columns[0].width = Cm(5)
-    ioc_table.columns[1].width = Cm(12)
+    # Set column widths (same as other tables: 3.5 + 13.5 = 17 cm)
+    ioc_table.columns[0].width = Cm(3.5)
+    ioc_table.columns[1].width = Cm(13.5)
     for row in ioc_table.rows:
-        row.cells[0].width = Cm(5)
-        row.cells[1].width = Cm(12)
+        row.cells[0].width = Cm(3.5)
+        row.cells[1].width = Cm(13.5)
 
     doc.add_paragraph()  # spacer
 
