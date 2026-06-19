@@ -385,9 +385,9 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Center cell: Title
     cell_center = header_table.rows[0].cells[1]
-    _set_cell_text(cell_center, "Reporte de Evento", bold=True, size=8,
+    _set_cell_text(cell_center, "Reporte de Evento", bold=True, size=12,
                    alignment=WD_ALIGN_PARAGRAPH.CENTER)
-    _add_paragraph_to_cell(cell_center, "CORTEX XDR", bold=False, size=8,
+    _add_paragraph_to_cell(cell_center, "CORTEX XDR", bold=True, size=12,
                            color="555555", alignment=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # Right cell: Cortex logo (converted from WebP to PNG in memory)
