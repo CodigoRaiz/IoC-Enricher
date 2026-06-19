@@ -66,7 +66,7 @@ def _set_cell_margins(cell, top: int = 0, bottom: int = 0, left: int = 0, right:
     tcPr.append(tcMar)
 
 
-def _set_cell_text(cell, text: str, bold: bool = False, size: int = 10,
+def _set_cell_text(cell, text: str, bold: bool = False, size: int = 8,
                    color: str = None, alignment: int = None, font_name: str = "Arial"):
     """Set text in a table cell with formatting. Clears existing content."""
     cell.text = ""
@@ -83,7 +83,7 @@ def _set_cell_text(cell, text: str, bold: bool = False, size: int = 10,
         run.font.color.rgb = RGBColor.from_string(color)
 
 
-def _add_paragraph_to_cell(cell, text: str, bold: bool = False, size: int = 10,
+def _add_paragraph_to_cell(cell, text: str, bold: bool = False, size: int = 8,
                            color: str = None, alignment: int = None, font_name: str = "Arial",
                            space_after: int = 2):
     """Add a new paragraph to a cell (preserving existing content)."""
@@ -102,7 +102,7 @@ def _add_paragraph_to_cell(cell, text: str, bold: bool = False, size: int = 10,
     return p
 
 
-def _add_bullet_to_cell(cell, text: str, bold_prefix: str = None, size: int = 10,
+def _add_bullet_to_cell(cell, text: str, bold_prefix: str = None, size: int = 8,
                         font_name: str = "Arial"):
     """Add a bullet point paragraph to a cell."""
     p = cell.add_paragraph()
@@ -350,7 +350,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     # -- Default style --
     style = doc.styles["Normal"]
     style.font.name = "Arial"
-    style.font.size = Pt(11)
+    style.font.size = Pt(8)
     style.paragraph_format.space_after = Pt(4)
     style.paragraph_format.line_spacing = WD_LINE_SPACING.SINGLE
 
@@ -385,9 +385,9 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Center cell: Title
     cell_center = header_table.rows[0].cells[1]
-    _set_cell_text(cell_center, "Reporte de Evento", bold=True, size=16,
+    _set_cell_text(cell_center, "Reporte de Evento", bold=True, size=8,
                    alignment=WD_ALIGN_PARAGRAPH.CENTER)
-    _add_paragraph_to_cell(cell_center, "CORTEX XDR", bold=False, size=11,
+    _add_paragraph_to_cell(cell_center, "CORTEX XDR", bold=False, size=8,
                            color="555555", alignment=WD_ALIGN_PARAGRAPH.CENTER, space_after=0)
 
     # Right cell: Cortex logo (converted from WebP to PNG in memory)
@@ -420,16 +420,16 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     _set_table_borders(meta_table)
 
     # Row 1: EVENTO
-    _set_cell_text(meta_table.rows[0].cells[0], "EVENTO", bold=True, size=10)
-    _set_cell_text(meta_table.rows[0].cells[1], "", bold=False, size=10)
+    _set_cell_text(meta_table.rows[0].cells[0], "EVENTO", bold=False, size=8)
+    _set_cell_text(meta_table.rows[0].cells[1], "", bold=False, size=8)
 
     # Row 2: FUENTE
-    _set_cell_text(meta_table.rows[1].cells[0], "FUENTE", bold=True, size=10)
-    _set_cell_text(meta_table.rows[1].cells[1], "", bold=False, size=10)
+    _set_cell_text(meta_table.rows[1].cells[0], "FUENTE", bold=False, size=8)
+    _set_cell_text(meta_table.rows[1].cells[1], "", bold=False, size=8)
 
     # Row 3: CRITICIDAD (colored)
-    _set_cell_text(meta_table.rows[2].cells[0], "CRITICIDAD", bold=True, size=10)
-    _set_cell_text(meta_table.rows[2].cells[1], criticidad_label, bold=True, size=10,
+    _set_cell_text(meta_table.rows[2].cells[0], "CRITICIDAD", bold=False, size=8)
+    _set_cell_text(meta_table.rows[2].cells[1], criticidad_label, bold=True, size=8,
                    color=criticidad_color)
 
     # Set metadata column widths
@@ -450,7 +450,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Left cell: label
     cell_label = analisis_table.rows[0].cells[0]
-    _set_cell_text(cell_label, "ANÁLISIS", bold=True, size=10,
+    _set_cell_text(cell_label, "ANÁLISIS", bold=False, size=8,
                    alignment=WD_ALIGN_PARAGRAPH.LEFT)
     cell_label.width = Cm(3.5)
     analisis_table.columns[0].width = Cm(3.5)
@@ -464,7 +464,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Analysis text (3-4 sentences)
     analysis_text = _build_analysis_text(ioc, ioc_type, results)
-    _add_paragraph_to_cell(cell_content, analysis_text, size=10, space_after=6)
+    _add_paragraph_to_cell(cell_content, analysis_text, size=8, space_after=6)
 
     # Sub-table inside: Fecha y Hora | Acción | IP Origen | IP Destino
     sub_table = doc.add_table(rows=2, cols=4)
@@ -512,12 +512,12 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         "en la infraestructura del cliente para determinar el alcance real de la amenaza. "
         "El presente análisis debe ser complementado con la experiencia del analista asignado."
     )
-    _add_paragraph_to_cell(cell_content, closing, size=10, space_after=4)
+    _add_paragraph_to_cell(cell_content, closing, size=8, space_after=4)
 
     # Space for analyst
-    _add_paragraph_to_cell(cell_content, "", size=10, space_after=2)
+    _add_paragraph_to_cell(cell_content, "", size=8, space_after=2)
     _add_paragraph_to_cell(cell_content,
-        "--- Espacio para notas del analista ---", size=9,
+        "--- Espacio para notas del analista ---", size=8,
         color="999999", alignment=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
 
     doc.add_paragraph()  # spacer
@@ -531,7 +531,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Left cell: label
     cell_riesgos_label = riesgos_table.rows[0].cells[0]
-    _set_cell_text(cell_riesgos_label, "RIESGOS IDENTIFICADOS", bold=True, size=10,
+    _set_cell_text(cell_riesgos_label, "RIESGOS IDENTIFICADOS", bold=False, size=8,
                    alignment=WD_ALIGN_PARAGRAPH.LEFT)
     cell_riesgos_label.width = Cm(3.5)
     riesgos_table.columns[0].width = Cm(3.5)
@@ -544,7 +544,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     risks = _build_risks(worst_verdict, results)
     for title, desc in risks:
-        _add_bullet_to_cell(cell_riesgos, desc, bold_prefix=title, size=10)
+        _add_bullet_to_cell(cell_riesgos, desc, bold_prefix=title, size=8)
 
     # ===================================================================
     # PAGE BREAK → PAGE 2
@@ -560,15 +560,15 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     _set_table_borders(ioc_table)
 
     for idx, hdr in enumerate(ioc_headers):
-        _set_cell_text(ioc_table.rows[0].cells[idx], hdr, bold=True, size=10,
+        _set_cell_text(ioc_table.rows[0].cells[idx], hdr, bold=True, size=8,
                        alignment=WD_ALIGN_PARAGRAPH.CENTER)
         _set_cell_shading(ioc_table.rows[0].cells[idx], "E0E0E0")
 
     # Pre-fill DIR IP ORIGEN with the analyzed IoC
     _set_cell_text(ioc_table.rows[1].cells[0], ioc if ioc_type == "ip" else ioc,
-                   size=10, alignment=WD_ALIGN_PARAGRAPH.CENTER)
+                   size=8, alignment=WD_ALIGN_PARAGRAPH.CENTER)
     for idx in range(1, 4):
-        _set_cell_text(ioc_table.rows[1].cells[idx], "", size=10,
+        _set_cell_text(ioc_table.rows[1].cells[idx], "", size=8,
                        alignment=WD_ALIGN_PARAGRAPH.CENTER)
 
     doc.add_paragraph()  # spacer
@@ -581,7 +581,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     _set_table_borders(reco_table)
 
     cell_reco_label = reco_table.rows[0].cells[0]
-    _set_cell_text(cell_reco_label, "RECOMENDACIONES", bold=True, size=10,
+    _set_cell_text(cell_reco_label, "RECOMENDACIONES", bold=False, size=8,
                    alignment=WD_ALIGN_PARAGRAPH.LEFT)
     cell_reco_label.width = Cm(3.5)
     reco_table.columns[0].width = Cm(3.5)
@@ -597,9 +597,9 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         sentences = re.split(r'(?<=[.!])\s+', ai_summary.strip())
         for sent in sentences:
             if sent.strip():
-                _add_bullet_to_cell(cell_reco, sent.strip(), size=10)
+                _add_bullet_to_cell(cell_reco, sent.strip(), size=8)
     else:
-        _add_paragraph_to_cell(cell_reco, "No disponible.", size=10)
+        _add_paragraph_to_cell(cell_reco, "No disponible.", size=8)
 
     doc.add_paragraph()  # spacer
 
@@ -612,7 +612,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Left cell: label spanning vertically
     cell_evidencia_label = evidencia_table.rows[0].cells[0]
-    _set_cell_text(cell_evidencia_label, "EVIDENCIA", bold=True, size=10,
+    _set_cell_text(cell_evidencia_label, "EVIDENCIA", bold=False, size=8,
                    alignment=WD_ALIGN_PARAGRAPH.LEFT)
     cell_evidencia_label.width = Cm(3.5)
     evidencia_table.columns[0].width = Cm(3.5)
@@ -626,7 +626,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     # Title with IoC type
     ioc_type_spanish = {"ip": "IP", "domain": "Dominio", "url": "URL", "hash": "Hash", "md5": "Hash", "sha1": "Hash", "sha256": "Hash"}.get(ioc_type, ioc_type)
     _add_paragraph_to_cell(cell_evidencia, f"Categorización {ioc_type_spanish}:",
-                           bold=True, size=11, space_after=6)
+                           bold=True, size=8, space_after=6)
 
     # Add screenshots
     screenshots_added = False
@@ -635,7 +635,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         if screenshot_bytes:
             screenshots_added = True
             # Source name as caption
-            _add_paragraph_to_cell(cell_evidencia, source_name, bold=True, size=10,
+            _add_paragraph_to_cell(cell_evidencia, source_name, bold=True, size=8,
                                    alignment=WD_ALIGN_PARAGRAPH.LEFT, space_after=2)
             # Embed image
             image_stream = BytesIO(screenshot_bytes)
@@ -650,7 +650,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     if not screenshots_added:
         _add_paragraph_to_cell(cell_evidencia, "No se generaron capturas de evidencia.",
-                               size=10, color="808080")
+                               size=8, color="808080")
 
     doc.add_paragraph()  # spacer
 
@@ -662,15 +662,15 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     _set_table_borders(footer_table)
 
     # ANALISTA row
-    _set_cell_text(footer_table.rows[0].cells[0], "ANALISTA", bold=True, size=10)
-    _set_cell_text(footer_table.rows[0].cells[1], "", size=10)  # blank for manual fill
+    _set_cell_text(footer_table.rows[0].cells[0], "ANALISTA", bold=False, size=8)
+    _set_cell_text(footer_table.rows[0].cells[1], "", size=8)  # blank for manual fill
     footer_table.rows[0].cells[0].width = Cm(3.5)
     footer_table.rows[0].cells[1].width = Cm(13.5)
 
     # FECHA DEL ANÁLISIS row
     now_date = datetime.now().strftime("%Y-%m-%d %H:%M")
-    _set_cell_text(footer_table.rows[1].cells[0], "FECHA DEL ANÁLISIS", bold=True, size=10)
-    _set_cell_text(footer_table.rows[1].cells[1], now_date, size=10)
+    _set_cell_text(footer_table.rows[1].cells[0], "FECHA DEL ANÁLISIS", bold=False, size=8)
+    _set_cell_text(footer_table.rows[1].cells[1], now_date, size=8)
     footer_table.rows[1].cells[0].width = Cm(3.5)
     footer_table.rows[1].cells[1].width = Cm(13.5)
 
