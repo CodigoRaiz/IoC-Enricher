@@ -436,7 +436,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Row 1: EVENTO
     _set_cell_text(meta_table.rows[0].cells[0], "EVENTO", bold=False, size=8)
-    _set_cell_text(meta_table.rows[0].cells[1], ioc, bold=False, size=8)
+    _set_cell_text(meta_table.rows[0].cells[1], "", bold=False, size=8)
 
     # Row 2: FUENTE
     _set_cell_text(meta_table.rows[1].cells[0], "FUENTE", bold=False, size=8)
