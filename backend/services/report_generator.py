@@ -330,17 +330,32 @@ def _build_ioc_data_table_text(ioc: str, ioc_type: str, results: dict) -> list:
     return rows
 
 
+def _get_worst_verdict_from_nested(results: dict) -> str:
+    """Determine the worst verdict across all IoCs and all sources."""
+    priority = {"malicious": 4, "suspicious": 3, "unknown": 2, "clean": 1}
+    worst = "clean"
+    worst_score = 0
+    for ioc, sources in results.items():
+        for source_name, result in sources.items():
+            verdict = result.get("verdict", "unknown").lower()
+            score = priority.get(verdict, 0)
+            if score > worst_score:
+                worst_score = score
+                worst = verdict
+    return worst
+
+
 def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str,
                          screenshots_dict: dict) -> bytes:
     """
-    Generate a .docx report for a single IoC in the official SOC format.
+    Generate a .docx report for one or multiple IoCs in the official SOC format.
 
     Args:
-        ioc: The indicator of compromise string.
+        ioc: Comma-separated IoC string or single IoC.
         ioc_type: Type of IoC (ip, domain, url, hash).
-        results: Dictionary mapping source_name -> {verdict, detail, web_url, ...}.
-        ai_summary: Executive summary text from AI (Groq).
-        screenshots_dict: Dictionary mapping source_name -> PNG bytes (or None).
+        results: Dictionary mapping ioc -> {source_name -> {verdict, detail, web_url, ...}}.
+        ai_summary: Executive summary text from AI (combined for all IoCs).
+        screenshots_dict: Dictionary mapping ioc -> {source_name -> PNG bytes (or None)}.
 
     Returns:
         .docx file as bytes.
@@ -361,8 +376,8 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
         section.left_margin = Cm(2)
         section.right_margin = Cm(2)
 
-    # -- Determine worst verdict --
-    worst_verdict = _get_worst_verdict(results)
+    # -- Determine worst verdict across all IoCs --
+    worst_verdict = _get_worst_verdict_from_nested(results)
     criticidad_label = VERDICT_LABELS.get(worst_verdict, "Desconocido")
     criticidad_color = CRITICIDAD_COLORS.get(worst_verdict, "808080")
 
@@ -421,7 +436,7 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
 
     # Row 1: EVENTO
     _set_cell_text(meta_table.rows[0].cells[0], "EVENTO", bold=False, size=8)
-    _set_cell_text(meta_table.rows[0].cells[1], "", bold=False, size=8)
+    _set_cell_text(meta_table.rows[0].cells[1], ioc, bold=False, size=8)
 
     # Row 2: FUENTE
     _set_cell_text(meta_table.rows[1].cells[0], "FUENTE", bold=False, size=8)
@@ -462,12 +477,18 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     # Clear default paragraph
     cell_content.text = ""
 
-    # Analysis text (3-4 sentences)
-    analysis_text = _build_analysis_text(ioc, ioc_type, results)
-    _add_paragraph_to_cell(cell_content, analysis_text, size=8, space_after=6)
+    # Analysis text for each IoC
+    ioc_list = [x.strip() for x in ioc.split(",") if x.strip()]
+    for ioc_item in ioc_list:
+        ioc_sources = results.get(ioc_item, {})
+        if ioc_sources:
+            analysis_text = _build_analysis_text(ioc_item, ioc_type, ioc_sources)
+            _add_paragraph_to_cell(cell_content, analysis_text, size=8, space_after=6)
 
     # Sub-table inside: Fecha y Hora | Acción | IP Origen | IP Destino
-    sub_table = doc.add_table(rows=2, cols=4)
+    # One row per IoC + header
+    num_iocs = len(ioc_list)
+    sub_table = doc.add_table(rows=1 + num_iocs, cols=4)
     sub_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     _set_table_borders(sub_table)
 
@@ -487,23 +508,22 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     for idx in range(4):
         sub_table.columns[idx].width = sub_col_widths[idx]
 
-    # Data row (pre-fill what's available)
+    # Data rows (one per IoC)
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-    data_values = [
-        now_str,
-        "En análisis",
-        ioc if ioc_type == "ip" else "",
-        ""
-    ]
-    for idx, val in enumerate(data_values):
-        _set_cell_text(sub_table.rows[1].cells[idx], val, size=8,
-                       alignment=WD_ALIGN_PARAGRAPH.CENTER)
-        _set_cell_margins(sub_table.rows[1].cells[idx], top=40, bottom=40, left=60, right=60)
+    for row_idx, ioc_item in enumerate(ioc_list):
+        data_row_idx = row_idx + 1
+        data_values = [
+            now_str,
+            "En análisis",
+            ioc_item if ioc_type == "ip" else "",
+            ""
+        ]
+        for idx, val in enumerate(data_values):
+            _set_cell_text(sub_table.rows[data_row_idx].cells[idx], val, size=8,
+                           alignment=WD_ALIGN_PARAGRAPH.CENTER)
+            _set_cell_margins(sub_table.rows[data_row_idx].cells[idx], top=40, bottom=40, left=60, right=60)
 
     # Add sub-table as inline content in the cell
-    # We need to move the sub_table into cell_content
-    # python-docx doesn't natively support nested tables, but we can use XML manipulation
-    # Remove sub_table from document body and add to cell
     cell_content._tc.append(sub_table._tbl)
 
     # 2 closing sentences
@@ -542,7 +562,13 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     riesgos_table.columns[1].width = Cm(13.5)
     cell_riesgos.text = ""
 
-    risks = _build_risks(worst_verdict, results)
+    # Use the first IoC's results for risk building (or any representative one)
+    first_ioc_sources = {}
+    for ioc_item in ioc_list:
+        if ioc_item in results:
+            first_ioc_sources = results[ioc_item]
+            break
+    risks = _build_risks(worst_verdict, first_ioc_sources)
     for title, desc in risks:
         _add_bullet_to_cell(cell_riesgos, desc, bold_prefix=title, size=8)
 
@@ -554,19 +580,29 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     # ===================================================================
     # PAGE 2 — IOC DATA TABLE (vertical: label | value)
     # ===================================================================
+    # Single table with 4 rows: DIR IP ORIGEN, PUERTO ORIGEN, DIR IP DESTINO, PUERTO DESTINO
+    # All IPs go as separate paragraphs inside the DIR IP ORIGEN value cell
     ioc_data = [
-        ("DIR IP ORIGEN",  ioc if ioc_type == "ip" else ""),
-        ("PUERTO ORIGEN",  ""),
-        ("DIR IP DESTINO", ""),
-        ("PUERTO DESTINO", ""),
+        ("DIR IP ORIGEN",  [ioc_item if ioc_type == "ip" else ioc_item for ioc_item in ioc_list]),
+        ("PUERTO ORIGEN",  [""]),
+        ("DIR IP DESTINO", [""]),
+        ("PUERTO DESTINO", [""]),
     ]
-    ioc_table = doc.add_table(rows=4, cols=2)
+
+    ioc_table = doc.add_table(rows=len(ioc_data), cols=2)
     ioc_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     _set_table_borders(ioc_table)
 
-    for row_idx, (label, value) in enumerate(ioc_data):
+    for row_idx, (label, values) in enumerate(ioc_data):
         _set_cell_text(ioc_table.rows[row_idx].cells[0], label, bold=False, size=8)
-        _set_cell_text(ioc_table.rows[row_idx].cells[1], value, size=8)
+        # Add each value as a separate paragraph in the cell
+        cell = ioc_table.rows[row_idx].cells[1]
+        cell.text = ""
+        for val_idx, val in enumerate(values):
+            if val_idx == 0:
+                _set_cell_text(cell, val, size=8)
+            else:
+                _add_paragraph_to_cell(cell, val, size=8, space_after=2)
 
     # Set column widths (same as other tables: 3.5 + 13.5 = 17 cm)
     ioc_table.columns[0].width = Cm(3.5)
@@ -627,30 +663,38 @@ def generate_word_report(ioc: str, ioc_type: str, results: dict, ai_summary: str
     evidencia_table.columns[1].width = Cm(13.5)
     cell_evidencia.text = ""
 
-    # Title with IoC type
-    ioc_type_spanish = {"ip": "IP", "domain": "Dominio", "url": "URL", "hash": "Hash", "md5": "Hash", "sha1": "Hash", "sha256": "Hash"}.get(ioc_type, ioc_type)
-    _add_paragraph_to_cell(cell_evidencia, f"Categorización {ioc_type_spanish}:",
-                           bold=True, size=8, space_after=6)
-
-    # Add screenshots
+    # Add screenshots grouped by IoC
     screenshots_added = False
-    for source_name in sorted(screenshots_dict.keys()):
-        screenshot_bytes = screenshots_dict[source_name]
-        if screenshot_bytes:
-            screenshots_added = True
-            # Source name as caption
-            _add_paragraph_to_cell(cell_evidencia, source_name, bold=True, size=8,
-                                   alignment=WD_ALIGN_PARAGRAPH.LEFT, space_after=2)
-            # Embed image
-            image_stream = BytesIO(screenshot_bytes)
-            p_img = cell_evidencia.add_paragraph()
-            p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run_img = p_img.add_run()
-            run_img.add_picture(image_stream, width=Cm(12.5))
-            # Spacer after image
-            sp = cell_evidencia.add_paragraph()
-            sp.paragraph_format.space_after = Pt(4)
-            sp.paragraph_format.space_before = Pt(0)
+    for ioc_item in sorted(screenshots_dict.keys()):
+        ioc_screenshots = screenshots_dict[ioc_item]
+        if not ioc_screenshots:
+            continue
+        # Filter out None values
+        ioc_screenshots = {k: v for k, v in ioc_screenshots.items() if v is not None}
+        if not ioc_screenshots:
+            continue
+
+        screenshots_added = True
+        # Separator title for this IoC
+        _add_paragraph_to_cell(cell_evidencia, f"IoC: {ioc_item}",
+                               bold=True, size=9, space_after=4)
+
+        for source_name in sorted(ioc_screenshots.keys()):
+            screenshot_bytes = ioc_screenshots[source_name]
+            if screenshot_bytes:
+                # Source name as caption
+                _add_paragraph_to_cell(cell_evidencia, source_name, bold=True, size=8,
+                                       alignment=WD_ALIGN_PARAGRAPH.LEFT, space_after=2)
+                # Embed image
+                image_stream = BytesIO(screenshot_bytes)
+                p_img = cell_evidencia.add_paragraph()
+                p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run_img = p_img.add_run()
+                run_img.add_picture(image_stream, width=Cm(12.5))
+                # Spacer after image
+                sp = cell_evidencia.add_paragraph()
+                sp.paragraph_format.space_after = Pt(4)
+                sp.paragraph_format.space_before = Pt(0)
 
     if not screenshots_added:
         _add_paragraph_to_cell(cell_evidencia, "No se generaron capturas de evidencia.",

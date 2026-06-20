@@ -583,6 +583,30 @@ footer {
   display: block;
 }
 
+.screenshot-spinner {
+  padding: 24px;
+  text-align: center;
+  color: var(--textdim);
+  font-size: 11px;
+}
+
+.screenshot-spinner::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .screenshot-failed {
   padding: 24px;
   text-align: center;
@@ -857,8 +881,10 @@ async function runAnalysis() {
     if (data.error) throw new Error(data.error);
 
     lastResults = data.results || [];
-    lastScreenshots = data.screenshots || {};
+    lastScreenshots = {};
     renderResults(lastResults);
+    // Iniciar capturas de pantalla de forma asíncrona para cada IoC
+    captureAllScreenshots(lastResults);
     updateCacheHits();
 
   } catch (err) {
@@ -870,6 +896,163 @@ async function runAnalysis() {
     document.getElementById("btn-analyze").disabled = false;
     updateAnalyzeBtn();
   }
+}
+
+// ── CAPTURAR PANTALLAS (SECUENCIAL, CON PROGRESO) ──
+async function captureAllScreenshots(results) {
+  // Crear sección de capturas con spinners para cada IoC
+  createScreenshotsSection(results);
+
+  // Filtrar IoCs que tienen web_urls
+  const iocsToCapture = results.filter(r => {
+    return Object.values(r.sources || {}).some(s => s.web_url);
+  });
+
+  if (iocsToCapture.length === 0) return;
+
+  // Actualizar mensaje de progreso
+  const progressEl = document.querySelector("#screenshots-section div[style*='font-size:11px']");
+  if (progressEl) progressEl.textContent = `Capturando IoC 1 de ${iocsToCapture.length}...`;
+
+  // Llamar /capture-screenshots de forma SECUENCIAL para cada IoC
+  for (let idx = 0; idx < iocsToCapture.length; idx++) {
+    const result = iocsToCapture[idx];
+    const ioc = result.ioc;
+
+    // Actualizar mensaje de progreso
+    if (progressEl) {
+      progressEl.textContent = `Capturando IoC ${idx + 1} de ${iocsToCapture.length}...`;
+    }
+
+    // Recolectar web_urls de las fuentes de este IoC
+    const webUrls = {};
+    for (const [sourceName, sourceData] of Object.entries(result.sources || {})) {
+      const url = sourceData.web_url;
+      if (url) {
+        webUrls[sourceName] = url;
+      }
+    }
+    if (Object.keys(webUrls).length === 0) continue;
+
+    try {
+      const resp = await fetch("http://localhost:5001/capture-screenshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ioc, web_urls: webUrls })
+      });
+      if (!resp.ok) {
+        console.warn(`Captura falló para ${ioc}: ${resp.status}`);
+        continue;
+      }
+      const data = await resp.json();
+      if (data.screenshots) {
+        lastScreenshots[ioc] = data.screenshots;
+        // Re-renderizar solo la sección de capturas
+        updateScreenshotsSection();
+      }
+    } catch (err) {
+      console.warn(`Error capturando pantallas para ${ioc}:`, err);
+    }
+  }
+
+  // Mensaje final
+  if (progressEl) {
+    progressEl.textContent = "Capturas completadas. Selecciona las que deseas incluir en el reporte Word.";
+  }
+}
+
+function createScreenshotsSection(results) {
+  const container = document.getElementById("results-container");
+  const existing = document.getElementById("screenshots-section");
+  if (existing) existing.remove();
+
+  const iocsWithUrls = results.filter(r => {
+    return Object.values(r.sources || {}).some(s => s.web_url);
+  });
+
+  if (iocsWithUrls.length === 0) {
+    document.getElementById("btn-word-report").style.display = "";
+    return;
+  }
+
+  const ssSection = document.createElement("div");
+  ssSection.className = "screenshots-section";
+  ssSection.id = "screenshots-section";
+  ssSection.innerHTML = `
+    <div class="section-label">Capturas de Pantalla</div>
+    <div style="font-size:11px; color:var(--textdim); margin-top:-6px;">
+      Capturando pantallas de fuentes en segundo plano...
+    </div>
+    ${iocsWithUrls.map(r => {
+      const ioc = r.ioc;
+      const sources = r.sources || {};
+      const sourceNames = Object.keys(sources).filter(sn => sources[sn].web_url);
+      if (sourceNames.length === 0) return '';
+      return `
+        <div style="margin-top:16px;" id="ss-group-${ioc.replace(/[^a-zA-Z0-9]/g, '_')}">
+          <div style="font-size:13px; font-weight:600; color:var(--accent); margin-bottom:8px;">
+            ${ioc}
+          </div>
+          <div class="screenshots-grid" id="ss-grid-${ioc.replace(/[^a-zA-Z0-9]/g, '_')}">
+            ${sourceNames.map(sourceName => {
+              const sourceObj = SOURCES.find(s => s.id === sourceName);
+              const label = sourceObj ? sourceObj.name : sourceName;
+              return `
+                <div class="screenshot-item" id="ss-item-${ioc.replace(/[^a-zA-Z0-9]/g, '_')}-${sourceName}">
+                  <div class="screenshot-header">
+                    <input type="checkbox" class="screenshot-checkbox" id="chk-screenshot-${ioc}-${sourceName}" checked>
+                    <span class="screenshot-label">${label}</span>
+                  </div>
+                  <div class="screenshot-spinner">Capturando...</div>
+                </div>`;
+            }).join("")}
+          </div>
+        </div>`;
+    }).join("")}
+  `;
+  container.appendChild(ssSection);
+  document.getElementById("btn-word-report").style.display = "";
+}
+
+function updateScreenshotsSection() {
+  const iocKeys = Object.keys(lastScreenshots).filter(ioc => {
+    const sources = lastScreenshots[ioc];
+    return Object.keys(sources).length > 0;
+  });
+
+  if (iocKeys.length === 0) return;
+
+  iocKeys.forEach(ioc => {
+    const safeIoc = ioc.replace(/[^a-zA-Z0-9]/g, '_');
+    const sources = lastScreenshots[ioc] || {};
+    const sourceNames = Object.keys(sources);
+
+    sourceNames.forEach(sourceName => {
+      const b64 = sources[sourceName];
+      const item = document.getElementById(`ss-item-${safeIoc}-${sourceName}`);
+      if (item) {
+        const sourceObj = SOURCES.find(s => s.id === sourceName);
+        const label = sourceObj ? sourceObj.name : sourceName;
+        if (b64) {
+          item.innerHTML = `
+            <div class="screenshot-header">
+              <input type="checkbox" class="screenshot-checkbox" id="chk-screenshot-${ioc}-${sourceName}" checked>
+              <span class="screenshot-label">${label}</span>
+            </div>
+            <div class="screenshot-img-wrap">
+              <img src="data:image/png;base64,${b64}" alt="${label}" loading="lazy">
+            </div>`;
+        } else {
+          item.innerHTML = `
+            <div class="screenshot-header">
+              <input type="checkbox" class="screenshot-checkbox" id="chk-screenshot-${ioc}-${sourceName}" disabled>
+              <span class="screenshot-label">${label}</span>
+            </div>
+            <div class="screenshot-failed">⚠ Captura no disponible</div>`;
+        }
+      }
+    });
+  });
 }
 
 // ── RENDERIZAR RESULTADOS ──
@@ -919,12 +1102,16 @@ function renderResults(results) {
     container.appendChild(card);
   });
 
-  // ── Renderizar sección de capturas de pantalla ──
-  const screenshotsKeys = Object.keys(lastScreenshots).filter(k => lastScreenshots[k] !== null);
+  // ── Renderizar sección de capturas de pantalla agrupadas por IoC ──
   const existingScreenshotsSection = document.getElementById("screenshots-section");
   if (existingScreenshotsSection) existingScreenshotsSection.remove();
 
-  if (screenshotsKeys.length > 0) {
+  const iocKeys = Object.keys(lastScreenshots).filter(ioc => {
+    const sources = lastScreenshots[ioc];
+    return Object.values(sources).some(v => v !== null);
+  });
+
+  if (iocKeys.length > 0) {
     const ssSection = document.createElement("div");
     ssSection.className = "screenshots-section";
     ssSection.id = "screenshots-section";
@@ -933,22 +1120,34 @@ function renderResults(results) {
       <div style="font-size:11px; color:var(--textdim); margin-top:-6px;">
         Selecciona las capturas que deseas incluir en el reporte Word
       </div>
-      <div class="screenshots-grid">
-        ${screenshotsKeys.map(sourceName => {
-          const b64 = lastScreenshots[sourceName];
-          const sourceObj = SOURCES.find(s => s.id === sourceName);
-          const label = sourceObj ? sourceObj.name : sourceName;
-          return `
-            <div class="screenshot-item">
-              <div class="screenshot-header">
-                <input type="checkbox" class="screenshot-checkbox" id="chk-screenshot-${sourceName}" checked>
-                <span class="screenshot-label">${label}</span>
-              </div>
-              <div class="screenshot-img-wrap">
-                <img src="data:image/png;base64,${b64}" alt="${label}" loading="lazy">
-              </div>
-            </div>`;
-        }).join("")}
+      ${iocKeys.map(ioc => {
+        const sources = lastScreenshots[ioc] || {};
+        const sourceNames = Object.keys(sources).filter(sn => sources[sn] !== null);
+        if (sourceNames.length === 0) return '';
+        return `
+          <div style="margin-top:16px;">
+            <div style="font-size:13px; font-weight:600; color:var(--accent); margin-bottom:8px;">
+              ${ioc}
+            </div>
+            <div class="screenshots-grid">
+              ${sourceNames.map(sourceName => {
+                const b64 = sources[sourceName];
+                const sourceObj = SOURCES.find(s => s.id === sourceName);
+                const label = sourceObj ? sourceObj.name : sourceName;
+                return `
+                  <div class="screenshot-item">
+                    <div class="screenshot-header">
+                      <input type="checkbox" class="screenshot-checkbox" id="chk-screenshot-${ioc}-${sourceName}" checked>
+                      <span class="screenshot-label">${label}</span>
+                    </div>
+                    <div class="screenshot-img-wrap">
+                      <img src="data:image/png;base64,${b64}" alt="${label}" loading="lazy">
+                    </div>
+                  </div>`;
+              }).join("")}
+            </div>
+          </div>`;
+      }).join("")}
       </div>`;
     container.appendChild(ssSection);
   }
@@ -1030,23 +1229,49 @@ async function downloadWordReport() {
   btn.disabled = true;
 
   try {
-    const result = lastResults[0];
+    if (!lastResults || lastResults.length === 0) {
+      throw new Error("No hay resultados para generar el reporte");
+    }
 
-    // Recopilar solo las capturas cuyo checkbox esté marcado
-    const selectedScreenshots = {};
-    Object.keys(lastScreenshots).forEach(sourceName => {
-      const chk = document.getElementById(`chk-screenshot-${sourceName}`);
-      if (chk && chk.checked && lastScreenshots[sourceName]) {
-        selectedScreenshots[sourceName] = lastScreenshots[sourceName];
+    // Recopilar solo las capturas cuyo checkbox esté marcado, agrupadas por IoC
+    const capturasPorIoC = {};
+    Object.keys(lastScreenshots).forEach(ioc => {
+      const iocSources = lastScreenshots[ioc] || {};
+      const selectedIocSources = {};
+      Object.keys(iocSources).forEach(sourceName => {
+        const chk = document.getElementById(`chk-screenshot-${ioc}-${sourceName}`);
+        if (chk && chk.checked && iocSources[sourceName]) {
+          selectedIocSources[sourceName] = iocSources[sourceName];
+        }
+      });
+      if (Object.keys(selectedIocSources).length > 0) {
+        capturasPorIoC[ioc] = selectedIocSources;
       }
     });
 
+    // Construir web_urls combinados de todos los IoCs
+    const webUrls = {};
+    lastResults.forEach(r => {
+      Object.entries(r.sources || {}).forEach(([sourceName, sourceData]) => {
+        if (sourceData.web_url && !webUrls[sourceName]) {
+          webUrls[sourceName] = sourceData.web_url;
+        }
+      });
+    });
+
+    // Construir results como dict anidado: {ioc: {fuente: {verdict, detail}}}
+    const resultsAnidados = {};
+    lastResults.forEach(r => {
+      resultsAnidados[r.ioc] = r.sources;
+    });
+
     const payload = {
-      ioc: result.ioc,
-      ioc_type: result.type,
-      results: result.sources,
-      ai_summary: result.ai_summary,
-      screenshots: selectedScreenshots
+      ioc: lastResults.map(r => r.ioc).join(", "),
+      ioc_type: lastResults[0].type,
+      results: resultsAnidados,
+      ai_summary: lastResults.map(r => r.ai_summary).join("\n\n"),
+      web_urls: webUrls,
+      screenshots: capturasPorIoC
     };
 
     const resp = await fetch("http://localhost:5001/generate-report", {
@@ -1064,7 +1289,7 @@ async function downloadWordReport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `reporte_${result.ioc.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    a.download = `reporte_iocs_${new Date().toISOString().slice(0,10)}.docx`;
     a.click();
     URL.revokeObjectURL(url);
 

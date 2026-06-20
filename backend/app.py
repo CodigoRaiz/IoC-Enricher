@@ -161,36 +161,7 @@ def analyze():
             result = enrich_ioc(ioc, ioc_type, sources, ai_provider)
             results.append(result)
 
-        # Recolectar web_urls de todos los resultados para tomar screenshots
-        web_urls = {}
-        for result in results:
-            for source_name, source_data in result.get("sources", {}).items():
-                url = source_data.get("web_url", "")
-                if url and source_name not in web_urls:
-                    web_urls[source_name] = url
-
-        # Tomar screenshots en paralelo y convertir a base64
-        screenshots = {}
-        if web_urls:
-            import logging
-            with ThreadPoolExecutor(max_workers=min(len(web_urls), 8)) as executor:
-                future_map = {}
-                for source_name, url in web_urls.items():
-                    future = executor.submit(
-                        lambda sn=source_name, u=url: _run_screenshot(u, sn)
-                    )
-                    future_map[future] = source_name
-
-                for future in as_completed(future_map):
-                    source_name = future_map[future]
-                    try:
-                        png_bytes = future.result()
-                        screenshots[source_name] = base64.b64encode(png_bytes).decode("utf-8")
-                    except Exception as e:
-                        logging.error(f"Screenshot falló para {source_name}: {e}")
-                        screenshots[source_name] = None
-
-        return jsonify({"results": results, "screenshots": screenshots})
+        return jsonify({"results": results})
 
     except Exception as e:
         return jsonify({"error": f"Error interno: {str(e)}"}), 500
@@ -230,8 +201,17 @@ def frontend():
 def generate_report():
     """
     Endpoint POST — genera un reporte .docx con screenshots (ya tomadas desde /analyze).
-    Recibe JSON: { "ioc", "ioc_type", "results", "ai_summary", "screenshots": {...} }
-    Las screenshots vienen como dict de base64 strings; se decodifican a bytes.
+    Ahora soporta múltiples IoCs:
+    Recibe JSON:
+    {
+      "ioc": "20.127.218.58, 20.168.5.42",
+      "ioc_type": "ip",
+      "results": { "20.127.218.58": {"virustotal": {...}, ...}, "20.168.5.42": ... },
+      "ai_summary": "Resumen combinado...",
+      "screenshots": { "20.127.218.58": {"virustotal": "base64...", ...}, ... }
+    }
+    Las screenshots vienen como dict anidado {ioc: {source: base64}}.
+    Se decodifican a bytes (agrupadas por IoC) y se pasan a generate_word_report.
     """
     data = request.get_json()
     if not data:
@@ -246,23 +226,28 @@ def generate_report():
     if not results:
         return jsonify({"error": "results no puede estar vacío"}), 400
 
-    # Decodificar screenshots de base64 a bytes
+    # screenshots_b64 es un dict anidado: {ioc: {source: base64}}
+    # Decodificar screenshots de base64 a bytes, agrupadas por IoC
     screenshots: dict = {}
-    for source_name, b64_str in screenshots_b64.items():
-        if b64_str:
-            try:
-                screenshots[source_name] = base64.b64decode(b64_str)
-            except Exception:
-                screenshots[source_name] = None
-        else:
-            screenshots[source_name] = None
+    for ioc_key, ioc_sources_b64 in screenshots_b64.items():
+        decoded_sources = {}
+        for source_name, b64_str in ioc_sources_b64.items():
+            if b64_str:
+                try:
+                    decoded_sources[source_name] = base64.b64decode(b64_str)
+                except Exception:
+                    decoded_sources[source_name] = None
+            else:
+                decoded_sources[source_name] = None
+        screenshots[ioc_key] = decoded_sources
 
-    # Generar el documento .docx
+    # Generar el documento .docx (results ya viene como dict anidado {ioc: {fuente: datos}})
     docx_bytes = generate_word_report(ioc, ioc_type, results, ai_summary, screenshots)
 
     # Nombre del archivo con fecha
     date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"IOC_Report_{ioc}_{date_str}.docx"
+    safe_ioc = ioc.replace(", ", "_").replace(" ", "_")[:50]
+    filename = f"IOC_Report_{safe_ioc}_{date_str}.docx"
 
     return send_file(
         io.BytesIO(docx_bytes),
@@ -270,6 +255,55 @@ def generate_report():
         as_attachment=True,
         download_name=filename
     )
+
+
+@app.route("/capture-screenshots", methods=["POST"])
+def capture_screenshots():
+    """
+    Endpoint POST — toma capturas de pantalla para un IoC específico.
+    Recibe JSON: { "ioc": "...", "web_urls": {"virustotal": "url", ...} }
+    Retorna: { "ioc": "...", "screenshots": {"virustotal": "base64...", ...} }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Cuerpo JSON requerido"}), 400
+
+        ioc = data.get("ioc", "")
+        web_urls = data.get("web_urls", {})
+
+        if not ioc:
+            return jsonify({"error": "ioc es requerido"}), 400
+        if not web_urls:
+            return jsonify({"error": "web_urls no puede estar vacío"}), 400
+
+        import logging
+
+        # Tomar screenshots con concurrencia limitada a 2
+        screenshots = {}
+        with ThreadPoolExecutor(max_workers=min(len(web_urls), 2)) as executor:
+            future_map = {}
+            for source_name, url in web_urls.items():
+                future = executor.submit(
+                    lambda sn=source_name, u=url: (sn, _run_screenshot(u, sn))
+                )
+                future_map[future] = source_name
+
+            for future in as_completed(future_map):
+                source_name = future_map[future]
+                try:
+                    _, png_bytes = future.result()
+                    if png_bytes is not None:
+                        screenshots[source_name] = base64.b64encode(png_bytes).decode("utf-8")
+                    # Si png_bytes es None, no incluimos la fuente en el resultado
+                except Exception as e:
+                    logging.error(f"Screenshot falló para {source_name} ({ioc}): {e}")
+                    # No incluimos fuentes con error en el resultado
+
+        return jsonify({"ioc": ioc, "screenshots": screenshots})
+
+    except Exception as e:
+        return jsonify({"error": f"Error interno: {str(e)}"}), 500
 
 
 def _run_screenshot(url: str, source_name: str, source_data: dict = None) -> bytes:
