@@ -514,6 +514,82 @@ footer {
 .footer-left { font-size: 11px; color: var(--textdim); }
 .footer-right { font-size: 11px; color: var(--muted); }
 
+/* ── SCREENSHOTS SECTION ── */
+.screenshots-section {
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.screenshots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.screenshot-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.screenshot-item:hover {
+  border-color: var(--accent);
+}
+
+.screenshot-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.15);
+}
+
+.screenshot-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.screenshot-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.screenshot-img-wrap {
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.screenshot-img-wrap img {
+  width: 100%;
+  max-width: 250px;
+  height: auto;
+  border-radius: 4px;
+  display: block;
+}
+
+.screenshot-failed {
+  padding: 24px;
+  text-align: center;
+  color: var(--textdim);
+  font-size: 11px;
+}
+
 /* ── ERROR ── */
 .error-box {
   padding: 14px 18px;
@@ -655,6 +731,7 @@ const SOURCES = [
 let selectedSources = [];
 let selectedAI = "gemini";
 let lastResults = [];
+let lastScreenshots = {};
 
 // ── RENDERIZAR FUENTES ──
 function renderSources() {
@@ -780,6 +857,7 @@ async function runAnalysis() {
     if (data.error) throw new Error(data.error);
 
     lastResults = data.results || [];
+    lastScreenshots = data.screenshots || {};
     renderResults(lastResults);
     updateCacheHits();
 
@@ -840,6 +918,40 @@ function renderResults(results) {
       </div>`;
     container.appendChild(card);
   });
+
+  // ── Renderizar sección de capturas de pantalla ──
+  const screenshotsKeys = Object.keys(lastScreenshots).filter(k => lastScreenshots[k] !== null);
+  const existingScreenshotsSection = document.getElementById("screenshots-section");
+  if (existingScreenshotsSection) existingScreenshotsSection.remove();
+
+  if (screenshotsKeys.length > 0) {
+    const ssSection = document.createElement("div");
+    ssSection.className = "screenshots-section";
+    ssSection.id = "screenshots-section";
+    ssSection.innerHTML = `
+      <div class="section-label">Capturas de Pantalla</div>
+      <div style="font-size:11px; color:var(--textdim); margin-top:-6px;">
+        Selecciona las capturas que deseas incluir en el reporte Word
+      </div>
+      <div class="screenshots-grid">
+        ${screenshotsKeys.map(sourceName => {
+          const b64 = lastScreenshots[sourceName];
+          const sourceObj = SOURCES.find(s => s.id === sourceName);
+          const label = sourceObj ? sourceObj.name : sourceName;
+          return `
+            <div class="screenshot-item">
+              <div class="screenshot-header">
+                <input type="checkbox" class="screenshot-checkbox" id="chk-screenshot-${sourceName}" checked>
+                <span class="screenshot-label">${label}</span>
+              </div>
+              <div class="screenshot-img-wrap">
+                <img src="data:image/png;base64,${b64}" alt="${label}" loading="lazy">
+              </div>
+            </div>`;
+        }).join("")}
+      </div>`;
+    container.appendChild(ssSection);
+  }
 
   document.getElementById("btn-word-report").style.display = "";
   document.getElementById("results-section").style.display = "block";
@@ -919,10 +1031,13 @@ async function downloadWordReport() {
 
   try {
     const result = lastResults[0];
-    const web_urls = {};
-    SOURCES.forEach(source => {
-      if (result.sources[source.id] && result.sources[source.id].web_url) {
-        web_urls[source.id] = result.sources[source.id].web_url;
+
+    // Recopilar solo las capturas cuyo checkbox esté marcado
+    const selectedScreenshots = {};
+    Object.keys(lastScreenshots).forEach(sourceName => {
+      const chk = document.getElementById(`chk-screenshot-${sourceName}`);
+      if (chk && chk.checked && lastScreenshots[sourceName]) {
+        selectedScreenshots[sourceName] = lastScreenshots[sourceName];
       }
     });
 
@@ -931,7 +1046,7 @@ async function downloadWordReport() {
       ioc_type: result.type,
       results: result.sources,
       ai_summary: result.ai_summary,
-      web_urls: web_urls
+      screenshots: selectedScreenshots
     };
 
     const resp = await fetch("http://localhost:5001/generate-report", {

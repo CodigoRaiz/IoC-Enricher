@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import io
+import base64
 import atexit
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -160,7 +161,36 @@ def analyze():
             result = enrich_ioc(ioc, ioc_type, sources, ai_provider)
             results.append(result)
 
-        return jsonify({"results": results})
+        # Recolectar web_urls de todos los resultados para tomar screenshots
+        web_urls = {}
+        for result in results:
+            for source_name, source_data in result.get("sources", {}).items():
+                url = source_data.get("web_url", "")
+                if url and source_name not in web_urls:
+                    web_urls[source_name] = url
+
+        # Tomar screenshots en paralelo y convertir a base64
+        screenshots = {}
+        if web_urls:
+            import logging
+            with ThreadPoolExecutor(max_workers=min(len(web_urls), 8)) as executor:
+                future_map = {}
+                for source_name, url in web_urls.items():
+                    future = executor.submit(
+                        lambda sn=source_name, u=url: _run_screenshot(u, sn)
+                    )
+                    future_map[future] = source_name
+
+                for future in as_completed(future_map):
+                    source_name = future_map[future]
+                    try:
+                        png_bytes = future.result()
+                        screenshots[source_name] = base64.b64encode(png_bytes).decode("utf-8")
+                    except Exception as e:
+                        logging.error(f"Screenshot falló para {source_name}: {e}")
+                        screenshots[source_name] = None
+
+        return jsonify({"results": results, "screenshots": screenshots})
 
     except Exception as e:
         return jsonify({"error": f"Error interno: {str(e)}"}), 500
@@ -199,8 +229,9 @@ def frontend():
 @app.route("/generate-report", methods=["POST"])
 def generate_report():
     """
-    Endpoint POST — genera un reporte .docx con screenshots de las URLs de cada fuente.
-    Recibe JSON: { "ioc", "ioc_type", "results", "ai_summary", "web_urls": {...} }
+    Endpoint POST — genera un reporte .docx con screenshots (ya tomadas desde /analyze).
+    Recibe JSON: { "ioc", "ioc_type", "results", "ai_summary", "screenshots": {...} }
+    Las screenshots vienen como dict de base64 strings; se decodifican a bytes.
     """
     data = request.get_json()
     if not data:
@@ -210,35 +241,21 @@ def generate_report():
     ioc_type = data.get("ioc_type", "")
     results = data.get("results", {})
     ai_summary = data.get("ai_summary", "")
-    web_urls = data.get("web_urls", {})
+    screenshots_b64 = data.get("screenshots", {})
 
     if not results:
         return jsonify({"error": "results no puede estar vacío"}), 400
 
-    # Tomar screenshots en paralelo usando ThreadPoolExecutor
-    # take_screenshot es async, por lo que se ejecuta con asyncio.run() dentro del worker
+    # Decodificar screenshots de base64 a bytes
     screenshots: dict = {}
-    import logging
-    logging.basicConfig(level=logging.INFO)
-
-    with ThreadPoolExecutor(max_workers=min(len(web_urls), 8)) as executor:
-        future_map = {}
-        for source_name, url in web_urls.items():
-            if url:
-                source_data = results.get(source_name, {})
-                future = executor.submit(
-                    lambda sn=source_name, u=url, sd=source_data: _run_screenshot(u, sn, sd)
-                )
-                future_map[future] = source_name
-
-        for future in as_completed(future_map):
-            source_name = future_map[future]
+    for source_name, b64_str in screenshots_b64.items():
+        if b64_str:
             try:
-                result = future.result()
-                screenshots[source_name] = result
-            except Exception as e:
-                logging.error(f"Screenshot falló para {source_name}: {e}")
+                screenshots[source_name] = base64.b64decode(b64_str)
+            except Exception:
                 screenshots[source_name] = None
+        else:
+            screenshots[source_name] = None
 
     # Generar el documento .docx
     docx_bytes = generate_word_report(ioc, ioc_type, results, ai_summary, screenshots)
