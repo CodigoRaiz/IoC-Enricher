@@ -2,7 +2,7 @@
 
 ## Propósito y Contexto
 
-Herramienta SOC diseñada para analistas de ciberseguridad que permite enriquecer Indicadores de Compromiso (IoCs) —como IPs, dominios, URLs y hashes— consultando múltiples fuentes de Threat Intelligence en paralelo. Genera un veredicto consolidado (malicioso/sospechoso/limpio/desconocido) y un resumen ejecutivo con IA para acelerar la toma de decisiones en incidentes.
+Herramienta SOC diseñada para analistas de ciberseguridad que permite enriquecer Indicadores de Compromiso (IoCs) —como IPs, dominios, URLs y hashes— consultando múltiples fuentes de Threat Intelligence en paralelo. Genera un veredicto consolidado (malicioso/sospechoso/limpio/desconocido) y un resumen ejecutivo con IA para acelerar la toma de decisiones en incidentes. Adicionalmente, permite capturar screenshots de las fuentes consultadas y generar un reporte .docx profesional en formato SOC con logotipos, tabla de análisis, riesgos, recomendaciones y evidencia visual.
 
 ## Stack Tecnológico
 
@@ -14,6 +14,9 @@ Herramienta SOC diseñada para analistas de ciberseguridad que permite enriquece
 | Concurrencia | `concurrent.futures.ThreadPoolExecutor` |
 | IA | Google Gemini 2.0 Flash / Groq (Llama 3.3 70B) |
 | APIs externas | 12 fuentes de Threat Intelligence vía REST |
+| Screenshots | Playwright (Chromium headless + Edge con sesiones persistentes) |
+| Reportes Word | python-docx + Pillow (PIL) |
+| Assets | Logotipos Axity y Cortex XDR en `backend/assets/` |
 
 ---
 
@@ -25,9 +28,14 @@ Herramienta SOC diseñada para analistas de ciberseguridad que permite enriquece
 IOC Enricher/
 ├── .env                          # API keys y configuración
 ├── backend/
-│   ├── app.py                    # Servidor Flask, endpoints /analyze y /health
+│   ├── app.py                    # Servidor Flask: /analyze, /health, /clear-cache,
+│   │                             #   /capture-screenshots, /generate-report
 │   ├── config.py                 # Carga de variables de entorno
 │   ├── cache.py                  # Caché SQLite con expiración
+│   ├── save_sessions.py          # Utilidad para guardar sesiones autenticadas en navegador
+│   ├── assets/                   # Recursos gráficos (Axity_Logo.png, Cortex-logo.webp)
+│   ├── data/
+│   │   └── sessions/             # Sesiones guardadas para AbuseIPDB, GreyNoise, ThreatBook
 │   ├── utils/
 │   │   └── ioc_detector.py       # Detección regex del tipo de IoC
 │   ├── services/
@@ -43,10 +51,12 @@ IOC Enricher/
 │   │   ├── metadefender.py       # MetaDefender Cloud API v4
 │   │   ├── hybrid_analysis.py    # Hybrid Analysis API v2
 │   │   ├── misp.py               # MISP (self-hosted)
-│   │   └── ai_summary.py         # Resumen ejecutivo con IA
+│   │   ├── ai_summary.py         # Resumen ejecutivo con IA
+│   │   ├── screenshot_service.py # Captura de pantallas con Playwright
+│   │   └── report_generator.py   # Generación de reportes .docx formato SOC
 │   └── __init__.py
 ├── frontend/
-│   └── index.html                # Interfaz de usuario
+│   └── index.html                # Interfaz de usuario SPA
 └── data/
     └── feeds.db                  # Base de datos SQLite (caché)
 ```
@@ -57,33 +67,46 @@ IOC Enricher/
 Usuario (navegador)
     │
     ▼
-Frontend (index.html) ──POST /analyze──► Flask (app.py)
-                                               │
-                                    ┌──────────┴──────────┐
-                                    ▼                     ▼
-                              ioc_detector.py        cache.py
-                              (detecta tipo)     (busca en SQLite)
-                                    │                     │
-                                    └──────────┬──────────┘
-                                               ▼
-                                    ThreadPoolExecutor
-                                    (consulta paralela)
-                                    │   │   │   │   │   │
-                                    ▼   ▼   ▼   ▼   ▼   ▼
-                              VirusTotal  AbuseIPDB  GreyNoise
-                              AlienVault  ThreatBook URLhaus
-                              PhishTank   GSB        MalwareBazaar
-                              MetaDefender HA        MISP
-                                               │
-                                               ▼
-                                        ai_summary.py
-                                    (Gemini o Groq)
-                                               │
-                                               ▼
-                                        save_to_cache()
-                                               │
-                                               ▼
-                                JSON → Frontend → Render cards
+Frontend (index.html) ──POST /analyze───────► Flask (app.py)  ──► enrich_ioc()
+    │                                                   │
+    │                                         ┌─────────┴─────────┐
+    │                                         ▼                   ▼
+    │                                   ioc_detector.py      cache.py
+    │                                   (detecta tipo)    (busca SQLite)
+    │                                         │                   │
+    │                                         └──────┬───────────┘
+    │                                                ▼
+    │                                     ThreadPoolExecutor
+    │                                     (consulta paralela a 12 fuentes)
+    │                                                │
+    │                                                ▼
+    │                                         ai_summary.py
+    │                                     (Gemini o Groq)
+    │                                                │
+    │                                                ▼
+    │                                         save_to_cache()
+    │                                                │
+    │                                                ▼
+    │                                 JSON → Frontend → Render cards
+    │                                                │
+    │                                ┌───────────────┴───────────────┐
+    │                                ▼                               ▼
+    │                    POST /capture-screenshots         Botón "Generar Reporte Word"
+    │                    (Playwright, 2 hilos máximo)            │
+    │                                │                           ▼
+    │                                ▼              POST /generate-report
+    │                    Screenshots base64          (results + screenshots)
+    │                    agrupadas por IoC                    │
+    │                                │                       ▼
+    │                                └──────────► report_generator.py
+    │                                            (python-docx + Pillow)
+    │                                                │
+    │                                                ▼
+    │                                         .docx descargable
+    │                                         (formato SOC oficial:
+    │                                          logos, tabla análisis,
+    │                                          riesgos, evidencia visual,
+    │                                          recomendaciones, footer)
 ```
 
 ---
@@ -119,6 +142,10 @@ Frontend (index.html) ──POST /analyze──► Flask (app.py)
 | `analyze()` | Endpoint POST que recibe IoCs, detecta tipos y delega en `enrich_ioc()`. |
 | `health()` | Endpoint GET que expone estado del servidor y estadísticas de caché del día. |
 | `frontend()` | Sirve el archivo `index.html` desde Flask. |
+| `clear_cache()` | Endpoint POST que limpia completamente la tabla de caché en SQLite. |
+| `generate_report()` | Endpoint POST que recibe resultados, screenshots y resumen IA; genera y descarga un .docx en formato SOC oficial. |
+| `capture_screenshots()` | Endpoint POST que recibe un IoC y sus web_urls; captura screenshots con Playwright (máx 2 concurrentes) y retorna base64. |
+| `_run_screenshot()` | Helper síncrono que ejecuta `take_screenshot()` asíncrono dentro de un hilo. |
 
 ### backend/config.py
 
@@ -226,18 +253,50 @@ Frontend (index.html) ──POST /analyze──► Flask (app.py)
 | `generate_with_groq()` | Llama a Groq (Llama 3.3 70B) con el prompt estructurado. |
 | `generate_summary()` | Selecciona proveedor IA y genera resumen ejecutivo en español (máx 3 oraciones). |
 
+### backend/services/screenshot_service.py
+
+| Función | Descripción |
+|---|---|
+| `take_screenshot()` | Función asíncrona que captura una screenshot de una URL usando Playwright. Soporta dos modos: (1) sesión persistente con Edge y cookies inyectadas para AbuseIPDB/GreyNoise/ThreatBook; (2) Chromium headless temporal para el resto de fuentes. Incluye lógica anti-detección (webdriver override, user-agent realista) y manejo específico por fuente (selectores, tiempos de espera, captcha en ThreatBook). |
+| `close_browser()` | Cierre limpio (ya no hay browser singleton). |
+
+### backend/services/report_generator.py
+
+| Función | Descripción |
+|---|---|
+| `generate_word_report()` | Función principal que genera un documento .docx profesional en formato SOC oficial. Recibe IoCs, resultados, resumen IA y screenshots (dict anidado). Construye: encabezado con logos Axity + Cortex XDR, tabla de metadatos (evento, fuente, criticidad), sección de análisis con tabla IP/sub-table, riesgos identificados según veredicto, tabla de datos del IoC, recomendaciones desde IA, evidencia visual con screenshots incrustadas, footer con analista y fecha, y nota legal. |
+| `_build_analysis_text()` | Genera 3-4 oraciones de análisis descriptivo a partir de los resultados de las APIs. |
+| `_build_risks()` | Genera lista de riesgos contextuales (4 items) según el veredicto: malicioso, sospechoso o limpio/desconocido. |
+| `_get_worst_verdict()` | Determina el peor veredicto entre todas las fuentes para un IoC. |
+| `_get_worst_verdict_from_nested()` | Determina el peor veredicto entre todos los IoCs y todas las fuentes. |
+
+### backend/save_sessions.py
+
+| Función | Descripción |
+|---|---|
+| `save_session()` | Abre una plataforma de Threat Intelligence en Edge (visible), espera que el usuario inicie sesión, y guarda cookies + localStorage en `backend/data/sessions/{source}.json`. |
+| `main()` | Punto de entrada que itera sobre todas las plataformas (ThreatBook, AbuseIPDB, GreyNoise) ejecutando `save_session()` para cada una. |
+
 ### frontend/index.html (JS)
 
 | Función | Descripción |
 |---|---|
 | `renderSources()` | Dibuja la UI de checkboxes para seleccionar fuentes desde la definición `SOURCES`. |
-| `analyze()` | Toma los IoCs del textarea, envía POST a `/analyze` y llama a `renderResults()`. |
-| `renderResults()` | Crea tarjetas con veredicto, resultados por fuente y resumen IA. |
+| `updateSourceCards()` | Actualiza estado habilitado/deshabilitado de las cards según el tipo de IoC seleccionado. |
+| `toggleSource()` | Marca/desmarca una fuente y actualiza `selectedSources`. |
+| `selectAI()` | Cambia entre proveedores de IA (Gemini/Groq). |
+| `runAnalysis()` | Toma los IoCs del textarea, envía POST a `/analyze`, renderiza resultados e inicia captura de screenshots asíncrona. |
+| `captureAllScreenshots()` | Itera secuencialmente sobre cada IoC llamando a `/capture-screenshots`, actualizando la UI de progreso y re-renderizando las imágenes conforme llegan. |
+| `createScreenshotsSection()` | Crea la sección de capturas con spinners mientras se toman las screenshots. |
+| `updateScreenshotsSection()` | Reemplaza spinners con las imágenes reales recibidas del backend. |
+| `renderResults()` | Crea tarjetas con veredicto, resultados por fuente, resumen IA y sección de capturas agrupadas por IoC. |
 | `getWorstVerdict()` | Determina el peor veredicto entre todas las fuentes para un IoC. |
 | `buildReportText()` | Genera un reporte de texto plano exportable. |
 | `copyReport()` | Copia el reporte al portapapeles. |
 | `downloadReport()` | Descarga el reporte como archivo `.txt`. |
+| `downloadWordReport()` | Recopila resultados y capturas seleccionadas (vía checkboxes), envía POST a `/generate-report` y descarga el .docx generado. |
 | `updateCacheHits()` | Consulta `/health` para mostrar hits de caché del día. |
+| `clearCache()` | Envía POST a `/clear-cache` para limpiar la base de datos. |
 
 ---
 
@@ -253,6 +312,8 @@ Frontend (index.html) ──POST /analyze──► Flask (app.py)
 - **MISP**: Depende de una instancia self-hosted; si `MISP_URL` no está configurada, el servicio se desactiva silenciosamente.
 - **Timeouts**: Todas las requests externas tienen un timeout global de 10 segundos configurable.
 - **Caché**: TTL fijo de 24 horas; no hay invalidación manual ni por webhook.
+- **Screenshots**: Las fuentes con protección Cloudflare (AbuseIPDB, GreyNoise, ThreatBook) requieren sesiones guardadas previamente con `save_sessions.py`. ThreatBook puede mostrar captcha si se excede la frecuencia.
+- **Reportes Word**: Los logos Axity y Cortex XDR deben estar presentes en `backend/assets/`. Cortex-logo.webp se convierte a PNG en memoria con Pillow.
 
 ### Pendientes / Mejoras posibles
 
@@ -260,6 +321,8 @@ Frontend (index.html) ──POST /analyze──► Flask (app.py)
 - **Autenticación**: No hay login ni control de acceso al endpoint `/analyze`.
 - **Exportación JSON**: El frontend solo exporta en texto plano; no hay botón para descargar JSON estructurado.
 - **Límite de 10 IoCs por request**: Definido en `config.py` pero el usuario no puede cambiarlo desde la UI.
-- **Monitoreo**: No hay logging estructurado (solo `print` en `virustotal.py`); no hay métricas exportables a Prometheus.
+- **Monitoreo**: No hay logging estructurado (solo `print` en `virustotal.py` y `screenshot_service.py`); no hay métricas exportables a Prometheus.
 - **Pruebas automatizadas**: No se encontraron tests unitarios ni de integración en el repositorio.
 - **Cola de procesamiento**: `ThreadPoolExecutor` se crea y destruye en cada request; no hay límite de concurrencia global.
+- **Screenshots en cola**: Las capturas se toman secuencialmente por IoC; no hay cola de prioridad ni reintentos automáticos ante fallo.
+- **Personalización de reportes**: El formato Word es fijo; no hay opción de seleccionar secciones o cambiar logos desde la UI.
