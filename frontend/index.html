@@ -111,6 +111,314 @@ header {
   background: rgba(0,212,255,0.1);
 }
 
+/* ── GEAR BUTTON ── */
+.btn-gear {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--textdim);
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.btn-gear:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,212,255,0.05);
+}
+.btn-gear .tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: all 0.15s;
+  pointer-events: none;
+  z-index: 100;
+}
+.btn-gear:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* ── SETTINGS MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.visible {
+  display: flex;
+}
+
+.modal-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 560px;
+  max-width: 94vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--textdim);
+  font-size: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.modal-close:hover {
+  background: rgba(255,68,85,0.1);
+  color: var(--red);
+}
+
+/* ── MODAL TABS ── */
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.modal-tab {
+  flex: 1;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--textdim);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.modal-tab:hover {
+  color: var(--text);
+  background: rgba(0,212,255,0.03);
+}
+.modal-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── MODAL BODY ── */
+.modal-body {
+  padding: 22px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-body .tab-content {
+  display: none;
+}
+.modal-body .tab-content.active {
+  display: block;
+}
+
+/* ── SETTINGS FORM ── */
+.settings-field {
+  margin-bottom: 16px;
+}
+.settings-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--textdim);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.settings-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.settings-input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.settings-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
+}
+.settings-input.password {
+  padding-right: 44px;
+}
+.settings-toggle-pw {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--textdim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.settings-toggle-pw:hover {
+  color: var(--text);
+}
+
+.btn-save {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+.btn-save:hover {
+  background: rgba(0,212,255,0.1);
+  box-shadow: 0 0 20px rgba(0,212,255,0.15);
+}
+.btn-save:disabled {
+  border-color: var(--border);
+  color: var(--textdim);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.save-feedback {
+  font-size: 11px;
+  text-align: center;
+  margin-top: 10px;
+  min-height: 20px;
+  transition: all 0.2s;
+}
+.save-feedback.success {
+  color: var(--green);
+}
+.save-feedback.error {
+  color: var(--red);
+}
+
+/* ── SESSION ROW ── */
+.session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+.session-row:hover {
+  border-color: rgba(0,212,255,0.15);
+}
+.session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.session-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.session-status {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.session-status.active {
+  color: var(--green);
+}
+.session-status.inactive {
+  color: var(--red);
+}
+.session-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.session-status-dot.active {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
+.session-status-dot.inactive {
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
+}
+.btn-renew {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--textdim);
+  font-family: var(--mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-renew:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ── SECCIONES ── */
 .section { margin-bottom: 28px; }
 
@@ -649,6 +957,10 @@ footer {
       <button class="btn-clear-cache" onclick="clearCache()">🗑 Limpiar caché</button>
       <div class="dot"></div>
       Sistema operativo
+      <button class="btn-gear" onclick="openSettings()" title="Configuración">
+        ⚙
+        <span class="tooltip">Configuración</span>
+      </button>
     </div>
   </header>
 
@@ -735,6 +1047,171 @@ footer {
 
 </div>
 
+<!-- ── SETTINGS MODAL ── -->
+<div class="modal-overlay" id="settings-modal" onclick="closeSettingsOutside(event)">
+  <div class="modal-panel" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">⚙ Configuración</div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-api" onclick="switchSettingsTab('api')">🔑 API Keys</button>
+      <button class="modal-tab" id="tab-general" onclick="switchSettingsTab('general')">⚡ General</button>
+      <button class="modal-tab" id="tab-sessions" onclick="switchSettingsTab('sessions')">🔐 Sesiones</button>
+    </div>
+
+    <div class="modal-body" id="settings-body">
+
+      <!-- TAB 1 — API Keys -->
+      <div class="tab-content active" id="content-api">
+        <div class="settings-field">
+          <div class="settings-label">VirusTotal API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-virustotal" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-virustotal')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">AbuseIPDB API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-abuseipdb" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-abuseipdb')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">GreyNoise API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-greynoise" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-greynoise')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">ThreatBook API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-threatbook" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-threatbook')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">AlienVault OTX Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-alienvault_otx" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-alienvault_otx')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">Google Safe Browsing Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-google_safe_browsing" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-google_safe_browsing')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">MetaDefender API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-metadefender" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-metadefender')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">MalwareBazaar API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-malwarebazaar" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-malwarebazaar')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">Hybrid Analysis Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-hybrid_analysis" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-hybrid_analysis')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">MISP API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-misp" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-misp')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">MISP URL</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-misp_url" placeholder="https://..." autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-misp_url')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">Gemini API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-gemini" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-gemini')">👁</button>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">Groq API Key</div>
+          <div class="settings-input-wrap">
+            <input class="settings-input password" type="password" id="set-groq" placeholder="••••••••" autocomplete="off">
+            <button class="settings-toggle-pw" onclick="togglePw('set-groq')">👁</button>
+          </div>
+        </div>
+        <button class="btn-save" id="btn-save-api" onclick="saveApiKeys()">💾 Guardar API Keys</button>
+        <div class="save-feedback" id="feedback-api"></div>
+      </div>
+
+      <!-- TAB 2 — General Config -->
+      <div class="tab-content" id="content-general">
+        <div class="settings-field">
+          <div class="settings-label">Caché TTL (horas)</div>
+          <input class="settings-input" type="number" id="set-cache-ttl" min="1" max="168" placeholder="24">
+        </div>
+        <div class="settings-field">
+          <div class="settings-label">Máx. IoCs por consulta</div>
+          <input class="settings-input" type="number" id="set-max-iocs" min="1" max="50" placeholder="10">
+        </div>
+        <button class="btn-save" id="btn-save-general" onclick="saveGeneralConfig()">💾 Guardar configuración</button>
+        <div class="save-feedback" id="feedback-general"></div>
+      </div>
+
+      <!-- TAB 3 — Sessions -->
+      <div class="tab-content" id="content-sessions">
+        <div class="session-row" id="session-abuseipdb">
+          <div class="session-info">
+            <div class="session-name">AbuseIPDB</div>
+            <div class="session-status" id="status-abuseipdb">
+              <span class="session-status-dot"></span>
+              <span class="session-status-text">Cargando...</span>
+            </div>
+          </div>
+          <button class="btn-renew" onclick="renewSession('abuseipdb')">Renovar</button>
+        </div>
+        <div class="session-row" id="session-greynoise">
+          <div class="session-info">
+            <div class="session-name">GreyNoise</div>
+            <div class="session-status" id="status-greynoise">
+              <span class="session-status-dot"></span>
+              <span class="session-status-text">Cargando...</span>
+            </div>
+          </div>
+          <button class="btn-renew" onclick="renewSession('greynoise')">Renovar</button>
+        </div>
+        <div class="session-row" id="session-threatbook">
+          <div class="session-info">
+            <div class="session-name">ThreatBook</div>
+            <div class="session-status" id="status-threatbook">
+              <span class="session-status-dot"></span>
+              <span class="session-status-text">Cargando...</span>
+            </div>
+          </div>
+          <button class="btn-renew" onclick="renewSession('threatbook')">Renovar</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <script>
 // ── DEFINICIÓN DE FUENTES ──
 const SOURCES = [
@@ -756,6 +1233,7 @@ let selectedSources = [];
 let selectedAI = "gemini";
 let lastResults = [];
 let lastScreenshots = {};
+let settingsConfig = {};
 
 // ── RENDERIZAR FUENTES ──
 function renderSources() {
@@ -1327,6 +1805,240 @@ async function clearCache() {
   } catch {
     btn.textContent = "⚠ Error al limpiar caché";
     setTimeout(() => { btn.disabled = false; btn.textContent = "🗑 Limpiar caché"; }, 2000);
+  }
+}
+
+// ═══════════════════════════════════════════
+// ── SETTINGS / CONFIGURATION PANEL ──
+// ═══════════════════════════════════════════
+
+const CONFIG_KEYS = {
+  // API Keys: input-id → .env key name
+  "virustotal":        "VIRUSTOTAL_API_KEY",
+  "abuseipdb":         "ABUSEIPDB_API_KEY",
+  "greynoise":         "GREYNOISE_API_KEY",
+  "threatbook":        "THREATBOOK_API_KEY",
+  "alienvault_otx":    "ALIENVAULT_OTX_KEY",
+  "google_safe_browsing": "GOOGLE_SAFE_BROWSING_KEY",
+  "metadefender":      "METADEFENDER_API_KEY",
+  "malwarebazaar":     "MALWAREBAZAAR_API_KEY",
+  "hybrid_analysis":   "HYBRID_ANALYSIS_KEY",
+  "misp":              "MISP_API_KEY",
+  "misp_url":          "MISP_URL",
+  "gemini":            "GEMINI_API_KEY",
+  "groq":              "GROQ_API_KEY",
+};
+
+// ── OPEN / CLOSE SETTINGS ──
+function openSettings() {
+  document.getElementById("settings-modal").classList.add("visible");
+  loadConfig();
+  loadSessionsStatus();
+}
+
+function closeSettings() {
+  document.getElementById("settings-modal").classList.remove("visible");
+}
+
+function closeSettingsOutside(event) {
+  if (event.target === event.currentTarget) {
+    closeSettings();
+  }
+}
+
+// ── TAB SWITCHING ──
+function switchSettingsTab(tab) {
+  // Quitar active de todos los tabs y contenidos
+  document.querySelectorAll(".modal-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  // Activar el seleccionado
+  document.getElementById(`tab-${tab}`).classList.add("active");
+  document.getElementById(`content-${tab}`).classList.add("active");
+}
+
+// ── TOGGLE PASSWORD VISIBILITY ──
+function togglePw(inputId) {
+  const input = document.getElementById(inputId);
+  if (input.type === "password") {
+    input.type = "text";
+  } else {
+    input.type = "password";
+  }
+}
+
+// ── LOAD CONFIG FROM BACKEND ──
+async function loadConfig() {
+  try {
+    const resp = await fetch("http://localhost:5001/config");
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const config = await resp.json();
+    settingsConfig = config;
+
+    // Rellenar campos de API Keys (valores enmascarados)
+    for (const [id, envKey] of Object.entries(CONFIG_KEYS)) {
+      const input = document.getElementById(`set-${id}`);
+      if (input && config[envKey] !== undefined) {
+        input.value = config[envKey];
+      }
+    }
+
+    // Rellenar configuración general
+    const ttlInput = document.getElementById("set-cache-ttl");
+    if (ttlInput && config["CACHE_TTL_HOURS"] !== undefined) {
+      ttlInput.value = config["CACHE_TTL_HOURS"];
+    }
+    const maxInput = document.getElementById("set-max-iocs");
+    if (maxInput && config["MAX_IOCS_PER_REQUEST"] !== undefined) {
+      maxInput.value = config["MAX_IOCS_PER_REQUEST"];
+    }
+
+    // Limpiar feedbacks
+    document.getElementById("feedback-api").textContent = "";
+    document.getElementById("feedback-general").textContent = "";
+
+  } catch (err) {
+    console.warn("Error cargando configuración:", err);
+    document.getElementById("feedback-api").textContent = "⚠ No se pudo cargar la configuración";
+    document.getElementById("feedback-api").className = "save-feedback error";
+  }
+}
+
+// ── LOAD SESSIONS STATUS ──
+async function loadSessionsStatus() {
+  const sources = ["abuseipdb", "greynoise", "threatbook"];
+  try {
+    const resp = await fetch("http://localhost:5001/sessions/status");
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const status = await resp.json();
+
+    sources.forEach(source => {
+      const active = status[source] === true;
+      const statusEl = document.getElementById(`status-${source}`);
+      if (statusEl) {
+        statusEl.className = `session-status ${active ? "active" : "inactive"}`;
+        statusEl.innerHTML = `
+          <span class="session-status-dot ${active ? "active" : "inactive"}"></span>
+          <span class="session-status-text">${active ? "✓ Activa" : "✗ No configurada"}</span>`;
+      }
+    });
+  } catch (err) {
+    console.warn("Error cargando estado de sesiones:", err);
+    sources.forEach(source => {
+      const statusEl = document.getElementById(`status-${source}`);
+      if (statusEl) {
+        statusEl.className = "session-status inactive";
+        statusEl.innerHTML = `
+          <span class="session-status-dot inactive"></span>
+          <span class="session-status-text">⚠ Error al consultar</span>`;
+      }
+    });
+  }
+}
+
+// ── RENEW SESSION BUTTON ──
+function renewSession(source) {
+  alert(`Para renovar ejecute: python backend/save_sessions.py`);
+}
+
+// ── SAVE API KEYS ──
+async function saveApiKeys() {
+  const btn = document.getElementById("btn-save-api");
+  const feedback = document.getElementById("feedback-api");
+  btn.disabled = true;
+  feedback.textContent = "Guardando...";
+  feedback.className = "save-feedback";
+
+  try {
+    const payload = {};
+    for (const [id, envKey] of Object.entries(CONFIG_KEYS)) {
+      const input = document.getElementById(`set-${id}`);
+      if (input) {
+        // Solo enviar si el usuario modificó el valor (si es distinto al enmascarado)
+        const currentVal = settingsConfig[envKey] || "";
+        const newVal = input.value.trim();
+        // Si el valor enmascarado es "" pero el input tiene algo, o si el input es diferente del enmascarado
+        if (newVal && newVal !== currentVal) {
+          // Si el valor enmascarado es "••••••XXXX" y el input tiene exactamente eso,
+          // significa que el usuario no cambió el valor → no enviar
+          if (newVal.startsWith("••••••") || newVal.startsWith("••••")) {
+            // El usuario no cambió el valor, lo dejamos como está
+            continue;
+          }
+          payload[envKey] = newVal;
+        }
+      }
+    }
+
+    if (Object.keys(payload).length === 0) {
+      feedback.textContent = "No hay cambios para guardar.";
+      feedback.className = "save-feedback";
+      btn.disabled = false;
+      return;
+    }
+
+    const resp = await fetch("http://localhost:5001/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    feedback.textContent = "✓ API Keys guardadas correctamente";
+    feedback.className = "save-feedback success";
+
+    // Recargar configuración para ver los valores enmascarados actualizados
+    setTimeout(() => loadConfig(), 500);
+
+  } catch (err) {
+    feedback.textContent = "⚠ Error al guardar: " + err.message;
+    feedback.className = "save-feedback error";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── SAVE GENERAL CONFIG ──
+async function saveGeneralConfig() {
+  const btn = document.getElementById("btn-save-general");
+  const feedback = document.getElementById("feedback-general");
+  btn.disabled = true;
+  feedback.textContent = "Guardando...";
+  feedback.className = "save-feedback";
+
+  try {
+    const ttl = document.getElementById("set-cache-ttl").value.trim();
+    const maxIocs = document.getElementById("set-max-iocs").value.trim();
+
+    const payload = {};
+    if (ttl) payload["CACHE_TTL_HOURS"] = ttl;
+    if (maxIocs) payload["MAX_IOCS_PER_REQUEST"] = maxIocs;
+
+    if (Object.keys(payload).length === 0) {
+      feedback.textContent = "No hay cambios para guardar.";
+      feedback.className = "save-feedback";
+      btn.disabled = false;
+      return;
+    }
+
+    const resp = await fetch("http://localhost:5001/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    feedback.textContent = "✓ Configuración guardada correctamente";
+    feedback.className = "save-feedback success";
+
+    setTimeout(() => loadConfig(), 500);
+
+  } catch (err) {
+    feedback.textContent = "⚠ Error al guardar: " + err.message;
+    feedback.className = "save-feedback error";
+  } finally {
+    btn.disabled = false;
   }
 }
 

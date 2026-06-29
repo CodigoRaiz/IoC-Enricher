@@ -9,6 +9,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
+from pathlib import Path
 
 # Agregar el directorio backend al path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -197,6 +198,156 @@ def frontend():
     """Sirve el frontend desde Flask."""
     frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
     return send_from_directory(frontend_path, "index.html")
+
+
+# ── CONFIG ENDPOINTS ──
+
+def _mask_key(value: str) -> str:
+    """Enmascara un API key mostrando solo los últimos 4 caracteres."""
+    if not value:
+        return ""
+    if len(value) <= 4:
+        return "••••" + value
+    return "••••••" + value[-4:]
+
+
+def _get_env_path() -> Path:
+    """Retorna la ruta al archivo .env en la raíz del proyecto."""
+    return Path(__file__).parent.parent / ".env"
+
+
+@app.route("/config", methods=["GET"])
+def get_config():
+    """
+    Lee el archivo .env y retorna JSON con las keys enmascaradas (solo últimos 4 chars visibles)
+    y la configuración general (CACHE_TTL_HOURS, MAX_IOCS_PER_REQUEST).
+    """
+    env_path = _get_env_path()
+    config_data = {
+        # API Keys (enmascaradas)
+        "VIRUSTOTAL_API_KEY": "",
+        "THREATBOOK_API_KEY": "",
+        "HYBRID_ANALYSIS_KEY": "",
+        "GOOGLE_SAFE_BROWSING_KEY": "",
+        "ABUSEIPDB_API_KEY": "",
+        "GREYNOISE_API_KEY": "",
+        "METADEFENDER_API_KEY": "",
+        "MALWAREBAZAAR_API_KEY": "",
+        "ALIENVAULT_OTX_KEY": "",
+        "MISP_API_KEY": "",
+        "GEMINI_API_KEY": "",
+        "GROQ_API_KEY": "",
+        "MISP_URL": "",
+        # Config general
+        "CACHE_TTL_HOURS": "24",
+        "MAX_IOCS_PER_REQUEST": "10",
+    }
+
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key in config_data:
+                    # Enmascarar si es API key o similar (contiene KEY, _KEY, _URL)
+                    if key.endswith("_KEY") or key == "MISP_URL":
+                        config_data[key] = _mask_key(value)
+                    else:
+                        config_data[key] = value
+
+    return jsonify(config_data)
+
+
+@app.route("/config", methods=["POST"])
+def update_config():
+    """
+    Recibe JSON con los valores nuevos, actualiza solo los campos recibidos
+    y escribe los cambios en el archivo .env.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Cuerpo JSON requerido"}), 400
+
+    env_path = _get_env_path()
+
+    # Claves conocidas para la configuración
+    known_keys = {
+        "VIRUSTOTAL_API_KEY", "THREATBOOK_API_KEY", "HYBRID_ANALYSIS_KEY",
+        "GOOGLE_SAFE_BROWSING_KEY", "ABUSEIPDB_API_KEY", "GREYNOISE_API_KEY",
+        "METADEFENDER_API_KEY", "MALWAREBAZAAR_API_KEY", "ALIENVAULT_OTX_KEY",
+        "MISP_API_KEY", "GEMINI_API_KEY", "GROQ_API_KEY", "MISP_URL",
+        "CACHE_TTL_HOURS", "MAX_IOCS_PER_REQUEST",
+    }
+
+    # Leer .env actual
+    lines = []
+    updated_keys = set()
+
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+    # Actualizar líneas existentes o agregar nuevas
+    new_lines = []
+    found_keys = set()
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            new_lines.append(line)
+            continue
+
+        key, _, _ = stripped.partition("=")
+        key = key.strip()
+
+        if key in known_keys and key in data:
+            # Actualizar valor (sin comillas alrededor)
+            new_value = str(data[key]).strip()
+            new_lines.append(f"{key}={new_value}\n")
+            found_keys.add(key)
+            updated_keys.add(key)
+        else:
+            new_lines.append(line)
+
+    # Agregar claves nuevas que no existían en el archivo
+    for key in known_keys:
+        if key in data and key not in found_keys:
+            new_value = str(data[key]).strip()
+            new_lines.append(f"{key}={new_value}\n")
+            updated_keys.add(key)
+
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+    return jsonify({"status": "ok", "updated": list(updated_keys)})
+
+
+@app.route("/sessions/status", methods=["GET"])
+def sessions_status():
+    """
+    Verifica si existen los archivos de sesión guardados en backend/data/sessions/.
+    Retorna:
+    {
+      "abuseipdb": true/false,
+      "greynoise": true/false,
+      "threatbook": true/false
+    }
+    """
+    sessions_dir = Path(__file__).parent / "data" / "sessions"
+
+    status = {
+        "abuseipdb":  (sessions_dir / "abuseipdb.json").exists(),
+        "greynoise":  (sessions_dir / "greynoise.json").exists(),
+        "threatbook": (sessions_dir / "threatbook.json").exists(),
+    }
+
+    return jsonify(status)
+
+
 @app.route("/generate-report", methods=["POST"])
 def generate_report():
     """
